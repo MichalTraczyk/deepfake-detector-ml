@@ -1,12 +1,4 @@
-import cv2
-from FaceProcessor import ImageFaceProcessor
+from DataPreprocessor import DataPreprocessor
 
-image = cv2.imread("data/Train/Fake/fake_0.jpg")
-face_processor = ImageFaceProcessor((256,256))
-face = face_processor.get_face(image)
-
-# Display the resulting image
-cv2.imshow('Image', face)
-
-cv2.waitKey(0)
-cv2.destroyAllWindows()
+processor = DataPreprocessor("data/test_dir/","C:/Users/Michal/PycharmProjects/DeepfakeDetectorMl/data_processed/test_dir")
+processor.process_directory()
