@@ -2,12 +2,12 @@ from DataPreprocessor import DataPreprocessor
 
 
 dirs_to_process = [
-    "data/Test/Fake/",
-    "data/Test/Real/",
-    "data/Train/Fake/",
-    "data/Train/Real/",
-    "data/Validation/Fake",
-    "data/ValidationReal",
+     "data/Test/Fake/",
+     "data/Test/Real/",
+     "data/Train/Fake/",
+     "data/Train/Real/",
+     "data/Validation/Fake",
+     "data/ValidationReal"
 ]
 
 for dir in dirs_to_process:
