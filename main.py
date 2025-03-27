@@ -1,4 +1,16 @@
 from DataPreprocessor import DataPreprocessor
 
-processor = DataPreprocessor("data/test_dir/","C:/Users/Michal/PycharmProjects/DeepfakeDetectorMl/data_processed/test_dir")
-processor.process_directory()
+
+dirs_to_process = [
+    "data/Test/Fake/",
+    "data/Test/Real/",
+    "data/Train/Fake/",
+    "data/Train/Real/",
+    "data/Validation/Fake",
+    "data/ValidationReal",
+]
+
+for dir in dirs_to_process:
+    print("Processing: ", dir)
+    processor = DataPreprocessor(dir, dir.replace("data", "data_processed"))
+    processor.process_directory()

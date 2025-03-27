@@ -13,15 +13,26 @@ class DataPreprocessor:
         self.image_processor = ImageFaceProcessor((256, 256))
 
     def process_directory(self):
+        all_files = len(os.listdir(self.source_directory))
+        processed_count = 0
+        failed = 0
         for filename in os.listdir(self.source_directory):
-            print(self.source_directory + filename)
             full_path = os.path.join(self.source_directory, filename)
             img = cv2.imread(full_path)
             processed = self.process_image(img)
             save_dir = os.path.join(self.save_directory, filename)
             if not os.path.exists(self.save_directory):
                 os.makedirs(self.save_directory)
-            cv2.imwrite(save_dir, processed)
+            if processed is None:
+                failed += 1
+                continue
+            success = cv2.imwrite(save_dir, processed)
+            if not success:
+                failed += 1
+                print("error saving file: ", save_dir)
+            processed_count += 1
+            print("Processed: " + str(processed_count / all_files))
+        print("failed: ", failed)
 
     def process_image(self, image):
         face = self.image_processor.get_face(image)
