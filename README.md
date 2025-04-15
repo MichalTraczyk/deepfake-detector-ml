@@ -9,7 +9,15 @@ data/Test/Real<br/>
 data/Train/Fake<br/>
 data/Train/Real<br/>
 
-instalacja<br/>
-pip install cmake face-recognition-models<br/>
-pip install dlib<br/>
-pip install face-recognition<br/>
+Zrob foldery<br/>
+data_processed/Test/Fake<br/>
+data_processed/Test/Real<br/>
+data_processed/Train/Fake<br/>
+data_processed/Train/Real<br/>
+
+To co trzeba zainstalowac jest w requirements.txt
+
+Jak już wszytko ustawisz to odpal 
+DataPreprocessor
+
+Jak już on ci poleci to trenowanie sieci jest w mainie

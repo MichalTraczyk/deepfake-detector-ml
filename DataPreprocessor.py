@@ -31,9 +31,24 @@ class DataPreprocessor:
                 failed += 1
                 print("error saving file: ", save_dir)
             processed_count += 1
-            print("Processed: " + str(processed_count / all_files))
+            print("Processed: " + str(processed_count / all_files), " from: ", self.source_directory)
         print("failed: ", failed)
 
     def process_image(self, image):
         face = self.image_processor.get_face(image)
         return face
+
+if __name__ == "__main__":
+    dirs_to_process = [
+         "data/Test/Fake/",
+         "data/Test/Real/",
+         "data/Train/Fake/",
+         "data/Train/Real/",
+         "data/Validation/Fake",
+         "data/Validation/Real"
+    ]
+
+    for dir in dirs_to_process:
+        print("Processing: ", dir)
+        processor = DataPreprocessor(dir, dir.replace("data", "data_processed"))
+        processor.process_directory()

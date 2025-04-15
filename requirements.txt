@@ -1,0 +1,6 @@
+cmake
+dlib
+face-recognition-models
+face-recognition
+opencv-python~=4.8.1.78
+tensorflow~=2.19.0
