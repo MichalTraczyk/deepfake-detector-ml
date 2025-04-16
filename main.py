@@ -32,7 +32,7 @@ train_ds = train_ds.prefetch(buffer_size=AUTOTUNE)
 val_ds = val_ds.prefetch(buffer_size=AUTOTUNE)
 test_ds = test_ds.prefetch(buffer_size=AUTOTUNE)
 
-checkpoint_path = "checkpoints/weights_only.ckpt"
+checkpoint_path = "checkpoints/checkpoint.weights.h5"
 checkpoint_cb = ModelCheckpoint(
     filepath=checkpoint_path,
     save_weights_only=True,
