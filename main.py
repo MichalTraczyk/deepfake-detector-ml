@@ -1,8 +1,7 @@
 import tensorflow as tf
+from keras.src.utils import image_dataset_from_directory
 from tensorflow.keras import layers, models
-from tensorflow.keras.preprocessing import image_dataset_from_directory
-from tensorflow.python.keras.callbacks import ModelCheckpoint
-
+from keras.src.callbacks import ModelCheckpoint
 image_size = (256, 256)
 batch_size = 32
 
