@@ -42,12 +42,9 @@ checkpoint_cb = ModelCheckpoint(
 )
 
 
-# Normalization layer
-normalization_layer = layers.Rescaling(1./255)
-
 # Build model
 model = models.Sequential([
-    normalization_layer,
+    layers.Rescaling(1./255, input_shape=(256, 256, 3)),
 
     layers.Conv2D(16, 3, padding='same', activation='relu'),
     layers.MaxPooling2D(),
@@ -70,15 +67,19 @@ model.compile(
     loss='binary_crossentropy',
     metrics=['accuracy']
 )
-
+epochs = 10
+resume = int(input("Resume? How many more epochs, 0 if fresh train"))
+if resume != 0:
+    model.load_weights("checkpoints/checkpoint.weights.h5")
+    epochs = resume
 # Train
 history = model.fit(
     train_ds,
     validation_data=val_ds,
-    epochs=10,
+    epochs=epochs,
     callbacks=[checkpoint_cb]
 )
 
-model.save("saved_model/full_model")
+model.save("saved_model/full_model.keras")
 test_loss, test_acc = model.evaluate(test_ds)
 print(f"Test accuracy: {test_acc:.2f}")
