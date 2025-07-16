@@ -1,23 +1,19 @@
 have fun<br/>
 
 dataset <br/>
-https://www.kaggle.com/datasets/manjilkarki/deepfake-and-real-images?resource=download-directory
+https://drive.google.com/open?id=1iLx76wsbi9itnkxSqz9BVBl4ZvnbIazj
 <br/>
 Wypakuj tak żeby było:<br/>
-data/Test/Fake<br/>
-data/Test/Real<br/>
-data/Train/Fake<br/>
-data/Train/Real<br/>
+data/Celeb-DF-v2/........
 
-Zrob foldery<br/>
-data_processed/Test/Fake<br/>
-data_processed/Test/Real<br/>
-data_processed/Train/Fake<br/>
-data_processed/Train/Real<br/>
+Zrob folder<br/>
+data_processed/
 
-To co trzeba zainstalowac jest w requirements.txt
+To co trzeba zainstalowac jest w requirements.txt, chyba wszystko
 
 Jak już wszytko ustawisz to odpal 
-DataPreprocessor
+preprocess.py
 
-Jak już on ci poleci to trenowanie sieci jest w mainie
+to ci bierze klatki pojedyncze z filmu i twarze z nich wycina, z 20 min zajmie
+
+trenowanie jeszcze nie jest zrobione

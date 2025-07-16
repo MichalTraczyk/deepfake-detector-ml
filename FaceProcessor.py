@@ -1,17 +1,16 @@
 import cv2
-import face_recognition
-
 
 class ImageFaceProcessor:
-
     def __init__(self, resolution):
         self.resolution = resolution
+        self.face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + "haarcascade_frontalface_default.xml")
 
     def get_face(self, image):
-        rgb_image = image[:, :, ::-1]  # bgr to rgb
-        face_locations = face_recognition.face_locations(rgb_image)
-        face_image = None
-        for i, (top, right, bottom, left) in enumerate(face_locations):
-            face_image = image[top:bottom, left:right]
-            face_image = cv2.resize(face_image, self.resolution)
-        return face_image
+        gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+        faces = self.face_cascade.detectMultiScale(gray, scaleFactor=1.1, minNeighbors=5)
+        if len(faces) == 0:
+            return None
+        x, y, w, h = faces[0]  # take first face
+        face = image[y:y+h, x:x+w]
+        face = cv2.resize(face, self.resolution)
+        return face
