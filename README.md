@@ -6,8 +6,9 @@ https://drive.google.com/open?id=1iLx76wsbi9itnkxSqz9BVBl4ZvnbIazj
 Wypakuj tak żeby było:<br/>
 data/Celeb-DF-v2/........
 
-Zrob folder<br/>
-data_processed/
+Zrob foldery<br/>
+data_processed/fake
+data_processed/real
 
 To co trzeba zainstalowac jest w requirements.txt, chyba wszystko
 
