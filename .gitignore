@@ -1,5 +1,6 @@
 data/
 data_processed/
+data_split/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

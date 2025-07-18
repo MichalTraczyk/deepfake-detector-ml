@@ -103,6 +103,7 @@ if __name__ == "__main__":
         for video in files_list:
             video_name = os.path.splitext(os.path.basename(video))[0]
             path = os.path.join(save_directory, "fake", video_name)
+
             video_path = os.path.join(videos_path, video)
             (count, saved) = process_video(video_path, path)
             print(f"fake: {round(processed / len(files_list), 2)} Processed {video}: saved {saved}/{count} frames.")
