@@ -32,6 +32,8 @@ test_ds = image_dataset_from_directory(
     image_size=image_size,
     batch_size=batch_size
 )
+
+
 def add_fft_to_dataset(rgb_dataset):
     def map_fn(image, label):
         # image: shape (256, 256, 3), dtype float32 [0, 255]
@@ -128,11 +130,30 @@ if resume != 0:
     model.load_weights(checkpoint_path)
     epochs = resume
 
+from collections import Counter
+
+
+def count_class_distribution(dataset):
+    class_counts = Counter()
+    for _, label in dataset.unbatch():
+        class_id = int(label.numpy())
+        class_counts[class_id] += 1
+    return class_counts
+
+
+class_counts = count_class_distribution(train_ds)
+total = sum(class_counts.values())
+class_weight = {
+    0: total / (2 * class_counts[0]),
+    1: total / (2 * class_counts[1])
+}
+print("Class weight:", class_weight)
 history = model.fit(
     train_ds,
     validation_data=val_ds,
     epochs=epochs,
-    callbacks=[checkpoint_cb]
+    callbacks=[checkpoint_cb],
+    class_weight=class_weight
 )
 
 model.save("saved/full_model.keras")
