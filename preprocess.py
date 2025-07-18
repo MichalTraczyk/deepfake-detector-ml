@@ -86,6 +86,8 @@ if __name__ == "__main__":
     fake_paths = [
         data_common_path + "Celeb-synthesis"
     ]
+    os.makedirs(os.path.join(save_directory, "fake"), exist_ok=True)
+    os.makedirs(os.path.join(save_directory, "real"), exist_ok=True)
     for videos_path in real_paths:
         files_list = os.listdir(videos_path)
         processed = 0
