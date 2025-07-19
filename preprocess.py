@@ -1,3 +1,4 @@
+import configparser
 import os
 import random
 import shutil
@@ -6,7 +7,12 @@ import cv2
 
 from FaceProcessor import ImageFaceProcessor
 
-image_processor = ImageFaceProcessor((256, 256))
+config_override = configparser.ConfigParser()
+config_override.read('config.ini')
+
+
+res = (int)(config_override["LearningSettings"]["ImageResolution"])
+image_processor = ImageFaceProcessor((res, res))
 
 
 def process_image(image):
@@ -16,19 +22,22 @@ def process_image(image):
 
 
 def split_images_to_train_val_test():
-    input_dir = 'data_processed'
-    output_dir = 'data_split'
+    base_dir = 'data_processed'
+    temp_dirs = {
+        'real': os.path.join(base_dir, 'real'),
+        'fake': os.path.join(base_dir, 'fake')
+    }
     split_ratios = {'train': 0.7, 'val': 0.15, 'test': 0.15}
     classes = ['real', 'fake']
     random.seed(42)
 
-    # Create output folders
+    # Create output folders inside base_dir
     for split in split_ratios:
         for cls in classes:
-            os.makedirs(os.path.join(output_dir, split, cls), exist_ok=True)
+            os.makedirs(os.path.join(base_dir, split, cls), exist_ok=True)
 
     for cls in classes:
-        src_dir = os.path.join(input_dir, cls)
+        src_dir = temp_dirs[cls]
         files = [f for f in os.listdir(src_dir) if os.path.isfile(os.path.join(src_dir, f))]
         random.shuffle(files)
 
@@ -45,11 +54,13 @@ def split_images_to_train_val_test():
         for split_name, split_files in splits.items():
             for file in split_files:
                 src_path = os.path.join(src_dir, file)
-                dst_path = os.path.join(output_dir, split_name, cls, file)
+                dst_path = os.path.join(base_dir, split_name, cls, file)
                 shutil.move(src_path, dst_path)
 
-    print("✅ Files moved and split into train/val/test.")
+        # Remove the empty temp class directory
+        os.rmdir(src_dir)
 
+    print("✅ Files split into train/val/test inside 'data_processed/'.")
 
 def process_video(video_path, output_path):
     cap = cv2.VideoCapture(video_path)
@@ -78,6 +89,8 @@ def process_video(video_path, output_path):
 
 if __name__ == "__main__":
     save_directory = "data_processed/"
+    os.makedirs(save_directory, exist_ok=True)
+
     data_common_path = "data/Celeb-DF-v2/"
     real_paths = [
         data_common_path + "Celeb-real",

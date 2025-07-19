@@ -1,3 +1,5 @@
+import configparser
+
 import cv2
 import numpy as np
 from keras_cv.losses import FocalLoss
@@ -7,8 +9,13 @@ from keras.src.utils import image_dataset_from_directory
 from tensorflow.keras import layers, models
 from keras.src.callbacks import ModelCheckpoint, EarlyStopping
 
-image_size = (256, 256)
-batch_size = 32
+config_override = configparser.ConfigParser()
+config_override.read('config.ini')
+
+res = (int)(config_override["LearningSettings"]["ImageResolution"])
+
+image_size = (res, res)
+batch_size = (int)(config_override["LearningSettings"]["TrainingBatchSize"])
 
 data_dir = "../../data_split/"
 # Load datasets
@@ -37,7 +44,7 @@ test_ds = image_dataset_from_directory(
 
 def add_fft_to_dataset(rgb_dataset):
     def map_fn(image, label):
-        # image: shape (256, 256, 3), dtype float32 [0, 255]
+        # image: shape (res, res, 3), dtype float32 [0, 255]
         rgb = tf.cast(image, tf.float32)
         gray = tf.image.rgb_to_grayscale(rgb)
 
@@ -45,7 +52,7 @@ def add_fft_to_dataset(rgb_dataset):
         fft = tf.signal.fft2d(tf.cast(gray[..., 0], tf.complex64))
         fft_shifted = tf.signal.fftshift(fft)
         magnitude = tf.math.log(tf.abs(fft_shifted) + 1e-8)
-        magnitude = tf.expand_dims(magnitude, axis=-1)  # shape (256, 256, 1)
+        magnitude = tf.expand_dims(magnitude, axis=-1)  # shape (res, res, 1)
         magnitude = tf.image.per_image_standardization(magnitude)
 
         inputs = {
@@ -90,18 +97,18 @@ def compute_fft_input(image):
 
 def build_model():
     # FFT input
-    input_fft = layers.Input(shape=(256, 256, 1), name="fft_input")
+    input_fft = layers.Input(shape=(res, res, 1), name="fft_input")
     x_fft = layers.Conv2D(16, (3, 3), activation='relu', padding='same')(input_fft)
     x_fft = layers.MaxPooling2D((2, 2))(x_fft)
     x_fft = layers.Conv2D(32, (3, 3), activation='relu', padding='same')(x_fft)
     x_fft = layers.GlobalAveragePooling2D()(x_fft)
 
     # RGB input
-    input_rgb = layers.Input(shape=(256, 256, 3), name="rgb_input")
+    input_rgb = layers.Input(shape=(res, res, 3), name="rgb_input")
     x_rgb = layers.Rescaling(1. / 255)(input_rgb)
 
     # Xception feature extractor
-    base_model = Xception(include_top=False, input_shape=(256, 256, 3), weights='imagenet')
+    base_model = Xception(include_top=False, input_shape=(res, res, 3), weights='imagenet')
     base_model.trainable = True
     x_rgb = base_model(x_rgb, training=False)
     x_rgb = layers.GlobalAveragePooling2D()(x_rgb)

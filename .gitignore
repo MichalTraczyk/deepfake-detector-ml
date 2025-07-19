@@ -1,11 +1,14 @@
 data/
 data_processed/
 data_split/
+*.weights.h5
+*.keras
+
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
-*$py.class
+*$py.clas
 
 # C extensions
 *.so
