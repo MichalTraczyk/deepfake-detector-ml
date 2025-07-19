@@ -1,10 +1,11 @@
 import cv2
 import numpy as np
+from keras_cv.losses import FocalLoss
 from keras.src.applications.xception import Xception
 import tensorflow as tf
 from keras.src.utils import image_dataset_from_directory
 from tensorflow.keras import layers, models
-from keras.src.callbacks import ModelCheckpoint
+from keras.src.callbacks import ModelCheckpoint, EarlyStopping
 
 image_size = (256, 256)
 batch_size = 32
@@ -101,7 +102,7 @@ def build_model():
 
     # Xception feature extractor
     base_model = Xception(include_top=False, input_shape=(256, 256, 3), weights='imagenet')
-    base_model.trainable = False
+    base_model.trainable = True
     x_rgb = base_model(x_rgb, training=False)
     x_rgb = layers.GlobalAveragePooling2D()(x_rgb)
 
@@ -120,11 +121,11 @@ model = build_model()
 
 model.compile(
     optimizer='adam',
-    loss='binary_crossentropy',
+    loss=FocalLoss(alpha=0.25, gamma=2.0, reduction="sum_over_batch_size"),
     metrics=['accuracy']
 )
 
-epochs = 10
+epochs = 30
 resume = int(input("Resume? How many more epochs, 0 if fresh train: "))
 if resume != 0:
     model.load_weights(checkpoint_path)
@@ -148,11 +149,12 @@ class_weight = {
     1: total / (2 * class_counts[1])
 }
 print("Class weight:", class_weight)
+early_stopping = EarlyStopping(patience=5, restore_best_weights=True)
 history = model.fit(
     train_ds,
     validation_data=val_ds,
     epochs=epochs,
-    callbacks=[checkpoint_cb],
+    callbacks=[checkpoint_cb,early_stopping],
     class_weight=class_weight
 )
 
