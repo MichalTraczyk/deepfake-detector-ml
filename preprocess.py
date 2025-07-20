@@ -10,7 +10,6 @@ from FaceProcessor import ImageFaceProcessor
 config_override = configparser.ConfigParser()
 config_override.read('config.ini')
 
-
 res = (int)(config_override["LearningSettings"]["ImageResolution"])
 image_processor = ImageFaceProcessor((res, res))
 
@@ -19,6 +18,10 @@ def process_image(image):
     global image_processor
     face = image_processor.get_face(image)
     return face
+
+
+def was_video_processed(output_dir, video_name):
+    return any(fname.startswith(video_name) for fname in os.listdir(output_dir))
 
 
 def split_images_to_train_val_test():
@@ -61,6 +64,7 @@ def split_images_to_train_val_test():
         os.rmdir(src_dir)
 
     print("✅ Files split into train/val/test inside 'data_processed/'.")
+
 
 def process_video(video_path, output_path):
     cap = cv2.VideoCapture(video_path)
@@ -106,7 +110,13 @@ if __name__ == "__main__":
         processed = 0
         for video in files_list:
             video_name = os.path.splitext(os.path.basename(video))[0]
-            path = os.path.join(save_directory, "real", video_name)
+            output_dir = os.path.join(save_directory, "real")
+            path = os.path.join(output_dir, video_name)
+
+            if was_video_processed(output_dir, video_name):
+                print(f"Skipping already processed video: {video}")
+                continue
+
             video_path = os.path.join(videos_path, video)
             (count, saved) = process_video(video_path, path)
             print(f"real: {round(processed / len(files_list), 2)} Processed {video}: saved {saved}/{count} frames.")
@@ -117,7 +127,12 @@ if __name__ == "__main__":
         processed = 0
         for video in files_list:
             video_name = os.path.splitext(os.path.basename(video))[0]
-            path = os.path.join(save_directory, "fake", video_name)
+            output_dir = os.path.join(save_directory, "fake")
+            path = os.path.join(output_dir, video_name)
+
+            if was_video_processed(output_dir, video_name):
+                print(f"Skipping already processed video: {video}")
+                continue
 
             video_path = os.path.join(videos_path, video)
             (count, saved) = process_video(video_path, path)
