@@ -126,14 +126,13 @@ if __name__ == "__main__":
             for video in files_list:
                 video_name = os.path.splitext(os.path.basename(video))[0]
                 path = os.path.join(output_dir, video_name)
-
                 if video_name in processed_real:
                     pbar.update(1)
                     continue
 
                 video_path = os.path.join(videos_path, video)
                 (count, saved) = process_video(video_path, path)
-                #pbar.write(f"📹 Processed {video}: saved {saved}/{count} frames.")
+                pbar.write(f"📹 Processed {video}: saved {saved}/{count} frames.")
                 pbar.update(1)
 
     # Process fake videos
@@ -153,6 +152,6 @@ if __name__ == "__main__":
 
                 video_path = os.path.join(videos_path, video)
                 (count, saved) = process_video(video_path, path)
-                #pbar.write(f"📹 Processed {video}: saved {saved}/{count} frames.")
+                pbar.write(f"📹 Processed {video}: saved {saved}/{count} frames.")
                 pbar.update(1)
     split_images_to_train_val_test()
