@@ -20,7 +20,6 @@ def process_image(image):
     face = image_processor.get_face(image)
     return face
 def get_processed_video_names(dir_path):
-    """Return set of base video names (without _frame_*) from saved files."""
     names = set()
     for filename in os.listdir(dir_path):
         if "_frame_" in filename:
@@ -119,39 +118,58 @@ if __name__ == "__main__":
 
     for videos_path in real_paths:
         files_list = os.listdir(videos_path)
+        files_list.sort()
         total_videos = len(files_list)
         output_dir = real_save_path
 
         with tqdm(total=total_videos, desc=f"Processing real videos from {videos_path}") as pbar:
-            for video in files_list:
+            i = 0
+            while i < total_videos:
+                video = files_list[i]
                 video_name = os.path.splitext(os.path.basename(video))[0]
-                path = os.path.join(output_dir, video_name)
-                if video_name in processed_real:
-                    pbar.update(1)
-                    continue
 
+                next_video_name = None
+                if i + 1 < total_videos:
+                    next_video = files_list[i + 1]
+                    next_video_name = os.path.splitext(os.path.basename(next_video))[0]
+
+                if video_name in processed_real or (next_video_name and next_video_name in processed_real):
+                    pbar.update(2)
+                    i += 2
+                    continue
                 video_path = os.path.join(videos_path, video)
+                path = os.path.join(output_dir, video_name)
                 (count, saved) = process_video(video_path, path)
                 pbar.write(f"📹 Processed {video}: saved {saved}/{count} frames.")
                 pbar.update(1)
+                i += 1
 
-    # Process fake videos
     for videos_path in fake_paths:
         files_list = os.listdir(videos_path)
+        files_list.sort()
         total_videos = len(files_list)
         output_dir = fake_save_path
 
         with tqdm(total=total_videos, desc=f"Processing fake videos from {videos_path}") as pbar:
-            for video in files_list:
+            i = 0
+            while i < total_videos:
+                video = files_list[i]
                 video_name = os.path.splitext(os.path.basename(video))[0]
-                path = os.path.join(output_dir, video_name)
 
-                if video_name in processed_fake:
-                    pbar.update(1)
+                next_video_name = None
+                if i + 1 < total_videos:
+                    next_video = files_list[i + 1]
+                    next_video_name = os.path.splitext(os.path.basename(next_video))[0]
+
+                if video_name in processed_fake or (next_video_name and next_video_name in processed_fake):
+                    pbar.update(2)
+                    i += 2
                     continue
-
                 video_path = os.path.join(videos_path, video)
+                path = os.path.join(output_dir, video_name)
                 (count, saved) = process_video(video_path, path)
                 pbar.write(f"📹 Processed {video}: saved {saved}/{count} frames.")
                 pbar.update(1)
+                i += 1
+
     split_images_to_train_val_test()

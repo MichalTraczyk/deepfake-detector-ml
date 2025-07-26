@@ -1,170 +1,232 @@
 import configparser
-
+import os
 import cv2
 import numpy as np
-from keras_cv.losses import FocalLoss
-from keras.src.applications.xception import Xception
-import tensorflow as tf
-from keras.src.utils import image_dataset_from_directory
-from tensorflow.keras import layers, models
-from keras.src.callbacks import ModelCheckpoint, EarlyStopping
+from collections import Counter
+
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+from torchvision import models, transforms
+from torch.utils.data import DataLoader, Dataset
+from torchvision.datasets import ImageFolder
+from torch.utils.data.dataset import random_split
+from torchvision.transforms.functional import to_tensor
+
+import os
+print(os.getcwd())
+
 
 config_override = configparser.ConfigParser()
 config_override.read('config.ini')
 
 res = (int)(config_override["LearningSettings"]["ImageResolution"])
-
-image_size = (res, res)
 batch_size = (int)(config_override["LearningSettings"]["TrainingBatchSize"])
 
-data_dir = "../../data_split/"
-# Load datasets
-train_ds = image_dataset_from_directory(
-    data_dir + "train",
-    label_mode="binary",
-    image_size=image_size,
-    batch_size=batch_size,
-    shuffle=True
-)
-
-val_ds = image_dataset_from_directory(
-    data_dir + "val",
-    label_mode="binary",
-    image_size=image_size,
-    batch_size=batch_size
-)
-
-test_ds = image_dataset_from_directory(
-    data_dir + "test",
-    label_mode="binary",
-    image_size=image_size,
-    batch_size=batch_size
-)
 
 
-def add_fft_to_dataset(rgb_dataset):
-    def map_fn(image, label):
-        # image: shape (res, res, 3), dtype float32 [0, 255]
-        rgb = tf.cast(image, tf.float32)
-        gray = tf.image.rgb_to_grayscale(rgb)
-
-        # FFT
-        fft = tf.signal.fft2d(tf.cast(gray[..., 0], tf.complex64))
-        fft_shifted = tf.signal.fftshift(fft)
-        magnitude = tf.math.log(tf.abs(fft_shifted) + 1e-8)
-        magnitude = tf.expand_dims(magnitude, axis=-1)  # shape (res, res, 1)
-        magnitude = tf.image.per_image_standardization(magnitude)
-
-        inputs = {
-            "rgb_input": rgb,
-            "fft_input": magnitude
-        }
-        return inputs, label
-
-    return rgb_dataset.map(map_fn, num_parallel_calls=tf.data.AUTOTUNE)
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
-train_ds = add_fft_to_dataset(train_ds)
-val_ds = add_fft_to_dataset(val_ds)
-test_ds = add_fft_to_dataset(test_ds)
+class FFTImageDataset(Dataset):
+    def __init__(self, image_folder, transform_rgb=None):
+        self.dataset = image_folder
+        self.transform_rgb = transform_rgb
 
-# Improve performance with prefetching
-AUTOTUNE = tf.data.AUTOTUNE
-train_ds = train_ds.prefetch(buffer_size=AUTOTUNE)
-val_ds = val_ds.prefetch(buffer_size=AUTOTUNE)
-test_ds = test_ds.prefetch(buffer_size=AUTOTUNE)
+    def __len__(self):
+        return len(self.dataset)
 
-# Checkpoint callback
-checkpoint_path = "saved/checkpoint.weights.h5"
-checkpoint_cb = ModelCheckpoint(
-    filepath=checkpoint_path,
-    save_weights_only=True,
-    save_best_only=False,
-    save_freq='epoch',
-    verbose=1
-)
+    def compute_fft(self, image):
+        gray = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
+        f = np.fft.fft2(gray)
+        fshift = np.fft.fftshift(f)
+        magnitude = 20 * np.log(np.abs(fshift) + 1e-8)
+        magnitude = cv2.normalize(magnitude, None, 0, 1, cv2.NORM_MINMAX)
+        magnitude = torch.tensor(magnitude).unsqueeze(0).float()
+        return magnitude
 
+    def __getitem__(self, idx):
+        image, label = self.dataset[idx]
+        image_np = np.array(image)
 
-def compute_fft_input(image):
-    image = cv2.resize(image, (224, 224))
-    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-    f = np.fft.fft2(gray)
-    fshift = np.fft.fftshift(f)
-    magnitude = 20 * np.log(np.abs(fshift) + 1e-8)
-    magnitude = cv2.normalize(magnitude, None, 0, 1, cv2.NORM_MINMAX)
-    return magnitude[..., np.newaxis]  # shape: (224, 224, 1)
+        fft_input = self.compute_fft(image_np)
 
+        if self.transform_rgb:
+            rgb_input = self.transform_rgb(image)
+        else:
+            rgb_input = to_tensor(image)
 
-def build_model():
-    # FFT input
-    input_fft = layers.Input(shape=(res, res, 1), name="fft_input")
-    x_fft = layers.Conv2D(16, (3, 3), activation='relu', padding='same')(input_fft)
-    x_fft = layers.MaxPooling2D((2, 2))(x_fft)
-    x_fft = layers.Conv2D(32, (3, 3), activation='relu', padding='same')(x_fft)
-    x_fft = layers.GlobalAveragePooling2D()(x_fft)
+        return {
+            "rgb_input": rgb_input,
+            "fft_input": fft_input
+        }, label
 
-    # RGB input
-    input_rgb = layers.Input(shape=(res, res, 3), name="rgb_input")
-    x_rgb = layers.Rescaling(1. / 255)(input_rgb)
+# Transforms
+transform_rgb = transforms.Compose([
+    transforms.Resize((res, res)),
+    transforms.ToTensor(),
+])
 
-    # Xception feature extractor
-    base_model = Xception(include_top=False, input_shape=(res, res, 3), weights='imagenet')
-    base_model.trainable = True
-    x_rgb = base_model(x_rgb, training=False)
-    x_rgb = layers.GlobalAveragePooling2D()(x_rgb)
+data_dir = "data_processed/"
+train_data = ImageFolder(os.path.join(data_dir, 'train'))
+val_data = ImageFolder(os.path.join(data_dir, 'val'))
+test_data = ImageFolder(os.path.join(data_dir, 'test'))
 
-    # Combine both
-    combined = layers.Concatenate()([x_rgb, x_fft])
-    combined = layers.Dense(128, activation='relu')(combined)
-    combined = layers.Dropout(0.3)(combined)
-    outputs = layers.Dense(1, activation='sigmoid')(combined)
+train_dataset = FFTImageDataset(train_data, transform_rgb)
+val_dataset = FFTImageDataset(val_data, transform_rgb)
+test_dataset = FFTImageDataset(test_data, transform_rgb)
 
-    # Create final model
-    model = models.Model(inputs={"rgb_input": input_rgb, "fft_input": input_fft}, outputs=outputs)
-    return model
+train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
+val_loader = DataLoader(val_dataset, batch_size=batch_size)
+test_loader = DataLoader(test_dataset, batch_size=batch_size)
 
+# Model definition
+class MultiInputModel(nn.Module):
+    def __init__(self):
+        super(MultiInputModel, self).__init__()
 
-model = build_model()
+        # FFT branch
+        self.fft_branch = nn.Sequential(
+            nn.Conv2d(1, 16, kernel_size=3, padding=1),
+            nn.ReLU(),
+            nn.MaxPool2d(2),
+            nn.Conv2d(16, 32, kernel_size=3, padding=1),
+            nn.ReLU(),
+            nn.AdaptiveAvgPool2d(1)
+        )
 
-model.compile(
-    optimizer='adam',
-    loss=FocalLoss(alpha=0.25, gamma=2.0, reduction="sum_over_batch_size"),
-    metrics=['accuracy']
-)
+        # RGB branch using pretrained Xception-like model
+        self.rgb_base = models.efficientnet_b0(weights=models.EfficientNet_B0_Weights.DEFAULT)
+        self.rgb_base.classifier = nn.Identity()
 
-epochs = 30
-resume = int(input("Resume? How many more epochs, 0 if fresh train: "))
-if resume != 0:
-    model.load_weights(checkpoint_path)
-    epochs = resume
+        self.fc = nn.Sequential(
+            nn.Linear(1280 + 32, 128),
+            nn.ReLU(),
+            nn.Dropout(0.3),
+            nn.Linear(128, 1),
+            nn.Sigmoid()
+        )
 
-from collections import Counter
+    def forward(self, inputs):
+        rgb_input = inputs['rgb_input']
+        fft_input = inputs['fft_input']
 
+        x_rgb = self.rgb_base(rgb_input)
+        x_fft = self.fft_branch(fft_input).view(rgb_input.size(0), -1)
 
-def count_class_distribution(dataset):
-    class_counts = Counter()
-    for _, label in dataset.unbatch():
-        class_id = int(label.numpy())
-        class_counts[class_id] += 1
-    return class_counts
+        combined = torch.cat([x_rgb, x_fft], dim=1)
+        return self.fc(combined)
 
+model = MultiInputModel().to(device)
 
-class_counts = count_class_distribution(train_ds)
-total = sum(class_counts.values())
-class_weight = {
-    0: total / (2 * class_counts[0]),
-    1: total / (2 * class_counts[1])
-}
-print("Class weight:", class_weight)
-early_stopping = EarlyStopping(patience=5, restore_best_weights=True)
-history = model.fit(
-    train_ds,
-    validation_data=val_ds,
-    epochs=epochs,
-    callbacks=[checkpoint_cb,early_stopping],
-    class_weight=class_weight
-)
+# Loss and optimizer
+class FocalLoss(nn.Module):
+    def __init__(self, alpha=0.25, gamma=2):
+        super(FocalLoss, self).__init__()
+        self.alpha = alpha
+        self.gamma = gamma
 
-model.save("saved/full_model.keras")
-test_loss, test_acc = model.evaluate(test_ds)
-print(f"Test accuracy: {test_acc:.2f}")
+    def forward(self, inputs, targets):
+        BCE = F.binary_cross_entropy(inputs, targets, reduction='none')
+        pt = torch.exp(-BCE)
+        focal_loss = self.alpha * (1 - pt) ** self.gamma * BCE
+        return focal_loss.mean()
+
+criterion = FocalLoss()
+optimizer = torch.optim.Adam(model.parameters(), lr=1e-4)
+
+# Training
+checkpoint_path = "saved/checkpoint.pt"
+resume_epochs = int(input("Resume? How many more epochs, 0 if fresh train: "))
+start_epoch = 0
+num_epochs = 30 if resume_epochs == 0 else resume_epochs
+
+if resume_epochs > 0 and os.path.exists(checkpoint_path):
+    checkpoint = torch.load(checkpoint_path)
+    model.load_state_dict(checkpoint['model_state_dict'])
+    optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+    start_epoch = checkpoint['epoch'] + 1
+
+# Class weights
+def compute_class_weights(loader):
+    labels = []
+    for _, label in loader:
+        labels.extend(label.numpy())
+    counter = Counter(labels)
+    total = sum(counter.values())
+    return {
+        0: total / (2 * counter[0]),
+        1: total / (2 * counter[1])
+    }
+
+class_weights_dict = compute_class_weights(train_loader)
+class_weights = torch.tensor([class_weights_dict[0], class_weights_dict[1]], device=device)
+
+def train():
+    best_val_loss = float('inf')
+    patience = 5
+    patience_counter = 0
+
+    for epoch in range(start_epoch, num_epochs):
+        model.train()
+        train_loss, correct, total = 0, 0, 0
+
+        for batch in train_loader:
+            inputs, labels = batch
+            for k in inputs:
+                inputs[k] = inputs[k].to(device)
+            labels = labels.float().unsqueeze(1).to(device)
+
+            optimizer.zero_grad()
+            outputs = model(inputs)
+            loss = criterion(outputs, labels)
+            loss.backward()
+            optimizer.step()
+
+            train_loss += loss.item() * labels.size(0)
+            preds = (outputs > 0.5).float()
+            correct += (preds == labels).sum().item()
+            total += labels.size(0)
+
+        val_loss, val_acc = evaluate(val_loader)
+        train_acc = correct / total
+        print(f"Epoch {epoch+1}, Train Loss: {train_loss/total:.4f}, Train Acc: {train_acc:.4f}, Val Loss: {val_loss:.4f}, Val Acc: {val_acc:.4f}")
+
+        # Early stopping
+        if val_loss < best_val_loss:
+            best_val_loss = val_loss
+            patience_counter = 0
+            torch.save({
+                'epoch': epoch,
+                'model_state_dict': model.state_dict(),
+                'optimizer_state_dict': optimizer.state_dict()
+            }, checkpoint_path)
+        else:
+            patience_counter += 1
+            if patience_counter >= patience:
+                print("Early stopping triggered.")
+                break
+
+def evaluate(loader):
+    model.eval()
+    total_loss = 0
+    correct = 0
+    total = 0
+
+    with torch.no_grad():
+        for inputs, labels in loader:
+            for k in inputs:
+                inputs[k] = inputs[k].to(device)
+            labels = labels.float().unsqueeze(1).to(device)
+            outputs = model(inputs)
+            loss = criterion(outputs, labels)
+            total_loss += loss.item() * labels.size(0)
+            preds = (outputs > 0.5).float()
+            correct += (preds == labels).sum().item()
+            total += labels.size(0)
+
+    return total_loss / total, correct / total
+
+train()
+test_loss, test_acc = evaluate(test_loader)
+print(f"Test Accuracy: {test_acc:.2f}")
