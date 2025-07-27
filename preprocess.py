@@ -3,7 +3,7 @@ import os
 import random
 import shutil
 from tqdm import tqdm
-
+import torch
 import cv2
 
 from FaceProcessor import ImageFaceProcessor
@@ -76,7 +76,7 @@ def process_video(video_path, output_path):
         return
     frame_count = 0
     saved_count = 0
-
+    skipped_in_row = 0
     while True:
         ret, frame = cap.read()
         if not ret:
@@ -84,7 +84,11 @@ def process_video(video_path, output_path):
         if frame_count % 30 == 0:
             img = process_image(frame)
             if img is None:
+                skipped_in_row += 1
+                if skipped_in_row == 60:
+                    break
                 continue
+            skipped_in_row = 0
             filename = f"{output_path}_frame_{saved_count:05d}.jpg"
             cv2.imwrite(filename, img)
             saved_count += 1
@@ -95,6 +99,8 @@ def process_video(video_path, output_path):
 
 
 if __name__ == "__main__":
+    if torch.cuda.is_available():
+        print("Usibng gpu!")
     save_directory = "data_processed/"
     os.makedirs(save_directory, exist_ok=True)
 
@@ -140,7 +146,6 @@ if __name__ == "__main__":
                 video_path = os.path.join(videos_path, video)
                 path = os.path.join(output_dir, video_name)
                 (count, saved) = process_video(video_path, path)
-                pbar.write(f"📹 Processed {video}: saved {saved}/{count} frames.")
                 pbar.update(1)
                 i += 1
 
@@ -168,7 +173,6 @@ if __name__ == "__main__":
                 video_path = os.path.join(videos_path, video)
                 path = os.path.join(output_dir, video_name)
                 (count, saved) = process_video(video_path, path)
-                pbar.write(f"📹 Processed {video}: saved {saved}/{count} frames.")
                 pbar.update(1)
                 i += 1
 
