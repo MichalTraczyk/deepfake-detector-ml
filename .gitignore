@@ -3,7 +3,7 @@ data_processed/
 data_split/
 *.weights.h5
 *.keras
-
+*.pt
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
