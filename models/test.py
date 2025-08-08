@@ -15,8 +15,8 @@ def evaluate_model(model, dataloader, device='cpu'):
             labels = labels.to(device)
 
             outputs = model(inputs)
-            _, preds = torch.max(outputs, 1)
-
+            preds = (torch.sigmoid(outputs) > 0.5).long()
+            print(torch.sigmoid(outputs).mean().item())
             all_preds.extend(preds.cpu().numpy())
             all_labels.extend(labels.cpu().numpy())
 

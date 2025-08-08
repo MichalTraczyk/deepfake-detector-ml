@@ -2,7 +2,7 @@ from torch.utils.data import DataLoader, Dataset
 import torchvision.transforms as transforms
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
+import torch.nn.functional as Fn
 import numpy as np
 import cv2
 from torchvision.transforms.functional import to_tensor
@@ -10,7 +10,9 @@ import random
 from PIL import Image, ImageFilter
 from torchvision.transforms import functional as F
 import io
-
+from torch.utils.data.sampler import Sampler
+import random
+from collections import defaultdict
 class AdvancedAugment:
     def __init__(self, prob=0.5):
         self.prob = prob
@@ -45,6 +47,37 @@ class AdvancedAugment:
         noisy_img = img_tensor + noise
         noisy_img = torch.clamp(noisy_img, 0.0, 1.0)
         return F.to_pil_image(noisy_img)
+class BalancedBatchSampler(Sampler):
+    def __init__(self, dataset, batch_size):
+        self.labels = [label for _, label in dataset]
+        self.label_to_indices = defaultdict(list)
+
+        for idx, label in enumerate(self.labels):
+            self.label_to_indices[label].append(idx)
+
+        self.batch_size = batch_size
+        self.half_batch = batch_size // 2
+
+        # Shuffle indices
+        for label in self.label_to_indices:
+            random.shuffle(self.label_to_indices[label])
+        self.min_class_len = min(len(self.label_to_indices[0]), len(self.label_to_indices[1]))
+        self.num_batches = self.min_class_len * 2 // self.batch_size
+
+    def __iter__(self):
+        indices_0 = self.label_to_indices[0].copy()
+        indices_1 = self.label_to_indices[1].copy()
+        random.shuffle(indices_0)
+        random.shuffle(indices_1)
+
+        for i in range(self.num_batches):
+            batch = indices_0[i * self.half_batch:(i + 1) * self.half_batch] + \
+                    indices_1[i * self.half_batch:(i + 1) * self.half_batch]
+            random.shuffle(batch)
+            yield batch
+
+    def __len__(self):
+        return self.num_batches
 
 class FFTImageDataset(Dataset):
     def __init__(self, image_folder, transform_rgb=None):
@@ -87,7 +120,7 @@ class FocalLoss(nn.Module):
         self.gamma = gamma
 
     def forward(self, inputs, targets):
-        BCE = F.binary_cross_entropy(inputs, targets, reduction='none')
+        BCE = Fn.binary_cross_entropy(inputs, targets, reduction='none')
         pt = torch.exp(-BCE)
         focal_loss = self.alpha * (1 - pt) ** self.gamma * BCE
         return focal_loss.mean()

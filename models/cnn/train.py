@@ -6,10 +6,10 @@ from torchvision import transforms
 from torchvision.datasets import ImageFolder
 import os
 from models.cnn.model import MultiInputModel
-from models.common import FFTImageDataset, FocalLoss, AdvancedAugment
+from models.common import FFTImageDataset, FocalLoss, AdvancedAugment, BalancedBatchSampler
 from torch.utils.data import DataLoader
 from tqdm import tqdm
-
+import torch.nn as nn
 from models.test import evaluate_model
 
 config_override = configparser.ConfigParser()
@@ -19,7 +19,6 @@ res = (int)(config_override["LearningSettings"]["ImageResolution"])
 batch_size = (int)(config_override["LearningSettings"]["TrainingBatchSize"])
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
 # Transforms
 advanced_augment = AdvancedAugment(prob=0.5)
 transform_rgb = transforms.Compose([
@@ -31,30 +30,23 @@ data_dir = "data_processed/"
 train_data = ImageFolder(os.path.join(data_dir, 'train'))
 val_data = ImageFolder(os.path.join(data_dir, 'val'))
 test_data = ImageFolder(os.path.join(data_dir, 'test'))
+
 train_dataset = FFTImageDataset(train_data, transform_rgb)
 val_dataset = FFTImageDataset(val_data, transform_rgb)
 test_dataset = FFTImageDataset(test_data, transform_rgb)
 
-train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
+train_sampler = BalancedBatchSampler(train_dataset.dataset, batch_size)
+
+
+train_loader = DataLoader(train_dataset, batch_sampler=train_sampler)
+
+
 val_loader = DataLoader(val_dataset, batch_size=batch_size)
 test_loader = DataLoader(test_dataset, batch_size=batch_size)
 model = MultiInputModel().to(device)
 
-def compute_class_weights(loader):
-    labels = []
-    for _, label in loader:
-        labels.extend(label.numpy())
-    counter = Counter(labels)
-    total = sum(counter.values())
-    weight_0 = total / (2 * counter[0])
-    weight_1 = total / (2 * counter[1])
-    return weight_0, weight_1
-
-weight_0, weight_1 = compute_class_weights(train_loader)
-
-# focal loss uses alpha for the weight of the positive class (label = 1)
-alpha = weight_1 / (weight_0 + weight_1)
-criterion = FocalLoss(alpha=alpha)
+pos_weight = torch.tensor([2.0]).to(device)
+criterion = nn.BCEWithLogitsLoss(pos_weight=pos_weight)
 
 optimizer = torch.optim.Adam(model.parameters(), lr=1e-4)
 # Training
@@ -91,7 +83,7 @@ def train():
             optimizer.step()
 
             train_loss += loss.item() * labels.size(0)
-            preds = (outputs > 0.5).float()
+            preds = (torch.sigmoid(outputs) > 0.5).float()
             correct += (preds == labels).sum().item()
             total += labels.size(0)
 

@@ -23,8 +23,7 @@ class MultiInputModel(nn.Module):
             nn.Linear(1280 + 32, 128),
             nn.ReLU(),
             nn.Dropout(0.3),
-            nn.Linear(128, 1),
-            nn.Sigmoid()
+            nn.Linear(128, 1)
         )
 
     def forward(self, inputs):
