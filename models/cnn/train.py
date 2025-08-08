@@ -134,3 +134,21 @@ def evaluate(loader):
 train()
 ev = evaluate_model(model,test_loader,'cuda')
 print(ev)
+
+# Get a sample from FFTImageDataset
+# (inputs, label) = dataset[0]
+# rgb_tensor = inputs["rgb_input"].unsqueeze(0).to(device)
+# fft_tensor = inputs["fft_input"].unsqueeze(0).to(device)
+#
+# # Grad-CAM for RGB branch
+# cam_rgb = gradcam_rgb_branch(model, rgb_tensor)
+# rgb_img = rgb_tensor.squeeze().permute(1,2,0).cpu().numpy()
+# rgb_img = (rgb_img - rgb_img.min()) / (rgb_img.max() - rgb_img.min())  # normalize for visualization
+# cam_on_rgb = show_cam_on_image(rgb_img, cam_rgb, use_rgb=True)
+#
+# # Grad-CAM for FFT branch
+# cam_fft = gradcam_fft_branch(model, fft_tensor)
+# fft_img = fft_tensor.squeeze().cpu().numpy()
+# fft_img = (fft_img - fft_img.min()) / (fft_img.max() - fft_img.min())
+# fft_img_rgb = np.repeat(fft_img[..., None], 3, axis=2)  # grayscale → RGB
+# cam_on_fft = show_cam_on_image(fft_img_rgb, cam_fft, use_rgb=True)
