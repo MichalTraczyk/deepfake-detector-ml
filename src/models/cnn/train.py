@@ -1,16 +1,16 @@
 import configparser
-import time
-from collections import Counter
 import torch
 from torchvision import transforms
 from torchvision.datasets import ImageFolder
 import os
-from models.cnn.model import MultiInputModel
-from models.common import FFTImageDataset, FocalLoss, AdvancedAugment, BalancedBatchSampler
+from src.models.cnn.model_cnn import MultiInputModel
+from src.models.common import FFTImageDataset, BalancedBatchSampler
 from torch.utils.data import DataLoader
-from tqdm import tqdm
 import torch.nn as nn
-from models.test import evaluate_model
+from src.utils.augment import AdvancedAugment
+from src.utils.checkpoint import save_checkpoint, load_checkpoint
+from src.utils.metrics import evaluate_model_metrics, evaluate_train_accuracy
+from src.utils.train_utils import train_one_epoch
 
 config_override = configparser.ConfigParser()
 config_override.read('config.ini')
@@ -51,14 +51,9 @@ criterion = nn.BCEWithLogitsLoss(pos_weight=pos_weight)
 optimizer = torch.optim.Adam(model.parameters(), lr=1e-4)
 # Training
 checkpoint_path = "saved/checkpoint.pt"
-start_epoch = 0
 num_epochs = (int)(config_override["LearningSettings"]["CnnTrainingEpochs"])
 
-if os.path.exists(checkpoint_path):
-    checkpoint = torch.load(checkpoint_path)
-    model.load_state_dict(checkpoint['model_state_dict'])
-    optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
-    start_epoch = checkpoint['epoch'] + 1
+model, optimizer, start_epoch = load_checkpoint(model, optimizer, checkpoint_path, device)
 
 def train():
     print("Starting training...")
@@ -67,39 +62,15 @@ def train():
     patience_counter = 0
 
     for epoch in range(start_epoch, num_epochs):
-        model.train()
-        train_loss, correct, total = 0, 0, 0
-
-        for batch in tqdm(train_loader, desc=f"Epoch {epoch + 1}/{num_epochs} - Training", leave=False):
-            inputs, labels = batch
-            for k in inputs:
-                inputs[k] = inputs[k].to(device)
-            labels = labels.float().unsqueeze(1).to(device)
-
-            optimizer.zero_grad()
-            outputs = model(inputs)
-            loss = criterion(outputs, labels)
-            loss.backward()
-            optimizer.step()
-
-            train_loss += loss.item() * labels.size(0)
-            preds = (torch.sigmoid(outputs) > 0.5).float()
-            correct += (preds == labels).sum().item()
-            total += labels.size(0)
-
+        train_loss, train_acc = train_one_epoch(model, train_loader, optimizer, criterion, device)
         val_loss, val_acc = evaluate(val_loader)
-        train_acc = correct / total
         print(
-            f"Epoch {epoch + 1}, Train Loss: {train_loss / total:.4f}, Train Acc: {train_acc:.4f}, Val Loss: {val_loss:.4f}, Val Acc: {val_acc:.4f}")
+            f"Epoch {epoch + 1}, Train Loss: {train_loss:.4f}, Train Acc: {train_acc:.4f}, Val Loss: {val_loss:.4f}, Val Acc: {val_acc:.4f}")
 
         if val_loss < best_val_loss:
             best_val_loss = val_loss
             patience_counter = 0
-            torch.save({
-                'epoch': epoch,
-                'model_state_dict': model.state_dict(),
-                'optimizer_state_dict': optimizer.state_dict()
-            }, checkpoint_path)
+            save_checkpoint(model, optimizer, epoch, checkpoint_path)
         else:
             patience_counter += 1
             if patience_counter >= patience:
@@ -108,31 +79,10 @@ def train():
 
 
 def evaluate(loader):
-    model.eval()
-    running_loss = 0
-    correct = 0
-    total = 0
-
-    with torch.no_grad():
-        for inputs, labels in tqdm(loader, desc="Evaluating", leave=False):
-            inputs = {k: v.to(device) for k, v in inputs.items()}
-            labels = labels.float().unsqueeze(1).to(device)
-
-            outputs = model(inputs)
-            loss = criterion(outputs, labels)
-
-            running_loss += loss.item() * labels.size(0)
-            preds = (outputs > 0.5).float()
-            correct += (preds == labels).sum().item()
-            total += labels.size(0)
-
-    avg_loss = running_loss / total
-    accuracy = correct / total
-    return avg_loss, accuracy
-
+    return evaluate_train_accuracy(model,loader,criterion,device)
 
 train()
-ev = evaluate_model(model,test_loader,'cuda')
+ev = evaluate_model_metrics(model,test_loader,'cuda',transformation=torch.sigmoid)
 print(ev)
 
 # Get a sample from FFTImageDataset
