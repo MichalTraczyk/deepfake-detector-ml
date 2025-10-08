@@ -4,7 +4,7 @@ from torchvision import transforms
 from torchvision.datasets import ImageFolder
 import os
 from src.models.cnn.model_cnn import MultiInputModel
-from src.models.common import FFTImageDataset, BalancedBatchSampler, ImageDataset
+from src.models.common import FFTImageDataset, BalancedBatchSampler
 from torch.utils.data import DataLoader
 import torch.nn as nn
 from src.utils.augment import AdvancedAugment
@@ -17,7 +17,6 @@ config_override.read('config.ini')
 
 res = (int)(config_override["LearningSettings"]["ImageResolution"])
 batch_size = (int)(config_override["LearningSettings"]["TrainingBatchSize"])
-num_epochs = (int)(config_override["LearningSettings"]["CnnTrainingEpochs"])
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 # Transforms
@@ -32,16 +31,18 @@ train_data = ImageFolder(os.path.join(data_dir, 'train'))
 val_data = ImageFolder(os.path.join(data_dir, 'val'))
 test_data = ImageFolder(os.path.join(data_dir, 'test'))
 
-train_dataset = ImageDataset(train_data, transform_rgb)
-val_dataset = ImageDataset(val_data, transform_rgb)
-test_dataset = ImageDataset(test_data, transform_rgb)
+train_dataset = FFTImageDataset(train_data, transform_rgb)
+val_dataset = FFTImageDataset(val_data, transform_rgb)
+test_dataset = FFTImageDataset(test_data, transform_rgb)
 
 train_sampler = BalancedBatchSampler(train_dataset.dataset, batch_size)
 
+
 train_loader = DataLoader(train_dataset, batch_sampler=train_sampler)
+
+
 val_loader = DataLoader(val_dataset, batch_size=batch_size)
 test_loader = DataLoader(test_dataset, batch_size=batch_size)
-
 model = MultiInputModel().to(device)
 
 pos_weight = torch.tensor([2.0]).to(device)
@@ -49,10 +50,10 @@ criterion = nn.BCEWithLogitsLoss(pos_weight=pos_weight)
 
 optimizer = torch.optim.Adam(model.parameters(), lr=1e-4)
 # Training
-checkpoint_path = "saved/checkpoint_cnn.pt"
+checkpoint_path = "saved/checkpoint.pt"
+num_epochs = (int)(config_override["LearningSettings"]["CnnTrainingEpochs"])
 
 model, optimizer, start_epoch = load_checkpoint(model, optimizer, checkpoint_path, device)
-
 
 def train():
     print("Starting training...")
@@ -78,9 +79,8 @@ def train():
 
 
 def evaluate(loader):
-    return evaluate_train_accuracy(model, loader, criterion, device)
-
+    return evaluate_train_accuracy(model,loader,criterion,device)
 
 train()
-ev = evaluate_model_metrics(model, test_loader, 'cuda', transformation=torch.sigmoid)
+ev = evaluate_model_metrics(model,test_loader,'cuda',transformation=torch.sigmoid)
 print(ev)

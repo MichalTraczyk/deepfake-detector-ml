@@ -8,6 +8,8 @@ from torchvision.transforms.functional import to_tensor
 from torch.utils.data.sampler import Sampler
 import random
 from collections import defaultdict
+
+
 class BalancedBatchSampler(Sampler):
     def __init__(self, dataset, batch_size):
         self.labels = [label for _, label in dataset]
@@ -40,6 +42,7 @@ class BalancedBatchSampler(Sampler):
     def __len__(self):
         return self.num_batches
 
+
 class FFTImageDataset(Dataset):
     def __init__(self, image_folder, transform_rgb=None):
         self.dataset = image_folder
@@ -71,6 +74,26 @@ class FFTImageDataset(Dataset):
         return {
             "rgb_input": rgb_input,
             "fft_input": fft_input
+        }, label
+
+
+class ImageDataset(Dataset):
+    def __init__(self, image_folder, transform_rgb=None):
+        self.dataset = image_folder
+        self.transform_rgb = transform_rgb
+
+    def __len__(self):
+        return len(self.dataset)
+
+    def __getitem__(self, idx):
+        image, label = self.dataset[idx]
+        if self.transform_rgb:
+            rgb_input = self.transform_rgb(image)
+        else:
+            rgb_input = to_tensor(image)
+
+        return {
+            "rgb_input": rgb_input
         }, label
 
 
