@@ -1,16 +1,12 @@
 import os
 import configparser
 import torch
-import numpy as np
 import matplotlib.pyplot as plt
 from torchvision import transforms
 from torchvision.datasets import ImageFolder
-from pytorch_grad_cam import GradCAM
-from pytorch_grad_cam.utils.image import show_cam_on_image
-from pytorch_grad_cam.utils.model_targets import ClassifierOutputTarget
 
 from src.models.cnn_fft.model_cnn_fft import MultiInputFFTModel
-from src.models.common import FFTImageDataset
+from src.models.common import FFTImageDataset, gradcam_on_branch
 from src.utils.checkpoint import load_checkpoint
 
 
@@ -36,26 +32,6 @@ class FFTBranchWrapper(nn.Module):
     def forward(self, x):
         x = self.fft_branch(x).view(x.size(0), -1)
         return x
-
-
-# ----------------------
-# Grad-CAM runner
-# ----------------------
-def gradcam_on_branch(branch_model, input_tensor, target_layer, device):
-    branch_model.eval().to(device)
-    cam = GradCAM(model=branch_model, target_layers=[target_layer])
-
-    grayscale_cam = cam(input_tensor=input_tensor.to(device),
-                        targets=[ClassifierOutputTarget(0)])[0]
-
-    base_img = input_tensor.squeeze().permute(1, 2, 0).cpu().numpy() \
-        if input_tensor.shape[1] == 3 else \
-        np.repeat(input_tensor.squeeze().cpu().numpy()[..., None], 3, axis=2)
-
-    base_img = (base_img - base_img.min()) / (base_img.max() - base_img.min() + 1e-8)
-    vis = show_cam_on_image(base_img, grayscale_cam, use_rgb=True)
-
-    return vis
 
 
 # ----------------------
@@ -114,12 +90,17 @@ vis_fft = gradcam_on_branch(fft_wrapper, fft_tensor, target_layer_fft, device)
 # Display side-by-side
 # ----------------------
 fig, axes = plt.subplots(1, 2, figsize=(10, 5))
-axes[0].imshow(vis_rgb)
-axes[0].set_title("RGB Branch Grad-CAM")
+
+raw_img = inputs["rgb_input"].permute(1, 2, 0).cpu().numpy()
+raw_img = (raw_img - raw_img.min()) / (raw_img.max() - raw_img.min() + 1e-8)
+
+axes[0].imshow(raw_img)
+axes[0].set_title("Raw image")
 axes[0].axis("off")
 
-axes[1].imshow(vis_fft)
-axes[1].set_title("FFT Branch Grad-CAM")
+
+axes[1].imshow(vis_rgb)
+axes[1].set_title("Grad-CAM")
 axes[1].axis("off")
 
 plt.tight_layout()

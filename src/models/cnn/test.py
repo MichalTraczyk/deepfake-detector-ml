@@ -1,16 +1,12 @@
 import os
 import configparser
 import torch
-import numpy as np
 import matplotlib.pyplot as plt
 from torchvision import transforms
 from torchvision.datasets import ImageFolder
-from pytorch_grad_cam import GradCAM
-from pytorch_grad_cam.utils.image import show_cam_on_image
-from pytorch_grad_cam.utils.model_targets import ClassifierOutputTarget
-
+from torch.utils.data import DataLoader
 from src.models.cnn.model_cnn import MultiInputModel
-from src.models.common import ImageDataset
+from src.models.common import ImageDataset, gradcam_on_branch
 from src.utils.checkpoint import load_checkpoint
 
 
@@ -28,27 +24,6 @@ class RGBBranchWrapper(nn.Module):
         return self.rgb_base(x)
 
 
-# ----------------------
-# Grad-CAM runner
-# ----------------------
-def gradcam_on_branch(branch_model, input_tensor, target_layer, device):
-    branch_model.eval().to(device)
-    cam = GradCAM(model=branch_model, target_layers=[target_layer])
-
-    grayscale_cam = cam(input_tensor=input_tensor.to(device),
-                        targets=[ClassifierOutputTarget(0)])[0]
-
-    base_img = input_tensor.squeeze().permute(1, 2, 0).cpu().numpy() \
-        if input_tensor.shape[1] == 3 else \
-        np.repeat(input_tensor.squeeze().cpu().numpy()[..., None], 3, axis=2)
-
-    base_img = (base_img - base_img.min()) / (base_img.max() - base_img.min() + 1e-8)
-    vis = show_cam_on_image(base_img, grayscale_cam, use_rgb=True)
-
-    return vis
-
-
-# ----------------------
 # Load config and data
 # ----------------------
 config_override = configparser.ConfigParser()
@@ -79,7 +54,7 @@ model, optimizer, start_epoch = load_checkpoint(model, optimizer, checkpoint_pat
 # ----------------------
 # Take one sample from test set
 # ----------------------
-(inputs, label) = test_dataset[6]
+(inputs, label) = test_dataset[3]
 rgb_tensor = inputs["rgb_input"].unsqueeze(0)
 
 
@@ -87,22 +62,26 @@ rgb_tensor = inputs["rgb_input"].unsqueeze(0)
 # Run Grad-CAM for RGB branch
 # ----------------------
 rgb_wrapper = RGBBranchWrapper(model)
-target_layer_rgb = rgb_wrapper.rgb_base.features[-1][0]
+target_layer_rgb = rgb_wrapper.rgb_base.features[-2][0]
 vis_rgb = gradcam_on_branch(rgb_wrapper, rgb_tensor, target_layer_rgb, device)
 
 # ----------------------
 # Display side-by-side
 # ----------------------
 fig, axes = plt.subplots(1, 2, figsize=(10, 5))
-axes[0].imshow(vis_rgb)
-axes[0].set_title("RGB Branch Grad-CAM")
+raw_img = inputs["rgb_input"].permute(1, 2, 0).cpu().numpy()
+raw_img = (raw_img - raw_img.min()) / (raw_img.max() - raw_img.min() + 1e-8)
+
+axes[0].imshow(raw_img)
+axes[0].set_title("Raw image")
 axes[0].axis("off")
+
+
+axes[1].imshow(vis_rgb)
+axes[1].set_title("Grad-CAM")
+axes[1].axis("off")
 plt.tight_layout()
 plt.show()
-
-
-from torch.utils.data import DataLoader
-import torch.nn.functional as F
 
 test_loader = DataLoader(test_dataset, batch_size=32, shuffle=False)
 
