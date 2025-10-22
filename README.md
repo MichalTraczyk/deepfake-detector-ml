@@ -1,5 +1,5 @@
-have fun<br/>
-
+praca inżynierska <br/>
+https://docs.google.com/document/d/1vwCZgo1lLyNIXctKjpwBRIgVVJ1DtH0ubrmZTCOeKFY/edit?usp=sharing <br />
 dataset <br/>
 https://drive.google.com/open?id=1iLx76wsbi9itnkxSqz9BVBl4ZvnbIazj
 <br/>
