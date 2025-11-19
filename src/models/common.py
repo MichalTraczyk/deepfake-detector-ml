@@ -8,6 +8,7 @@ from torchvision.transforms.functional import to_tensor
 from torch.utils.data.sampler import Sampler
 import random
 from collections import defaultdict
+
 class BalancedBatchSampler(Sampler):
     def __init__(self, dataset, batch_size):
         self.labels = [label for _, label in dataset]
