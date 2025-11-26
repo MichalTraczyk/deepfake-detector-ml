@@ -1,5 +1,5 @@
-have fun<br/>
-
+praca inżynierska <br/>
+https://docs.google.com/document/d/1vwCZgo1lLyNIXctKjpwBRIgVVJ1DtH0ubrmZTCOeKFY/edit?usp=sharing <br />
 dataset <br/>
 https://drive.google.com/open?id=1iLx76wsbi9itnkxSqz9BVBl4ZvnbIazj
 <br/>
@@ -23,3 +23,21 @@ https://developer.nvidia.com/cudnn-downloads?target_os=Windows&target_arch=x86_6
 <br/>i zainstaluj
 potem w folderze projektu:<br/>
 pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu128
+
+
+folder data wyglada teraz tak
+data/ 
+  01_raw/
+    Caleb itd
+  02_processed/
+    data_processed/ itd
+  03_models/
+    i tam gotowe modele beda przetrenowane
+  04_reporting/
+    wszystkie ploty tam zapisuje po testcie
+
+Pozatym do testow zainstaluj pip install pytest
+
+a reszta w requirments.txt
+jak cos jeszcze bede pewnie zmienial zeby bylo bardziej przejrzyste ale wyjebane
+a i jeszcze trening odpalasz w taki sposob kedro run --pipeline training_pipeline_cnn itd reszte nazw masz w pipeline registry
