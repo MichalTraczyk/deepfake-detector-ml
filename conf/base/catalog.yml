@@ -1,0 +1,26 @@
+# Here you can define all your datasets by using simple YAML syntax.
+#
+# Documentation for this file format can be found in "The Data Catalog"
+# Link: https://docs.kedro.org/en/stable/data/data_catalog.html
+data_loaders:
+  type: MemoryDataSet
+
+trained_model_vit:
+  type: pickle.PickleDataSet
+  filepath: data/03_models/vit_model.pt
+
+final_metrics_vit:
+  type: json.JSONDataSet
+  filepath: data/04_reporting/vit_metrics.json
+
+trained_model_cnn:
+  type: pickle.PickleDataSet
+  filepath: data/03_models/cnn_model.pt
+
+final_metrics_cnn:
+  type: json.JSONDataSet
+  filepath: data/04_reporting/cnn_metrics.json
+
+cnn_gradcam_plot:
+  type: matplotlib.MatplotlibWriter
+  filepath: data/04_reporting/cnn_gradcam.png
