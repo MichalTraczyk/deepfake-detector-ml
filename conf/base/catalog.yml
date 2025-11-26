@@ -3,22 +3,22 @@
 # Documentation for this file format can be found in "The Data Catalog"
 # Link: https://docs.kedro.org/en/stable/data/data_catalog.html
 data_loaders:
-  type: MemoryDataSet
+  type: MemoryDataset
 
 trained_model_vit:
-  type: pickle.PickleDataSet
+  type: pickle.PickleDataset
   filepath: data/03_models/vit_model.pt
 
 final_metrics_vit:
-  type: json.JSONDataSet
+  type: json.JSONDataset
   filepath: data/04_reporting/vit_metrics.json
 
 trained_model_cnn:
-  type: pickle.PickleDataSet
+  type: pickle.PickleDataset
   filepath: data/03_models/cnn_model.pt
 
 final_metrics_cnn:
-  type: json.JSONDataSet
+  type: json.JSONDataset
   filepath: data/04_reporting/cnn_metrics.json
 
 cnn_gradcam_plot:
