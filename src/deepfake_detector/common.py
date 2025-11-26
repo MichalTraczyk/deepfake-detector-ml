@@ -8,6 +8,9 @@ from torchvision.transforms.functional import to_tensor
 from torch.utils.data.sampler import Sampler
 import random
 from collections import defaultdict
+from pytorch_grad_cam import GradCAM
+from pytorch_grad_cam.utils.image import show_cam_on_image
+from pytorch_grad_cam.utils.model_targets import ClassifierOutputTarget
 
 class BalancedBatchSampler(Sampler):
     def __init__(self, dataset, batch_size):
@@ -40,6 +43,7 @@ class BalancedBatchSampler(Sampler):
 
     def __len__(self):
         return self.num_batches
+
 
 class FFTImageDataset(Dataset):
     def __init__(self, image_folder, transform_rgb=None):
@@ -75,6 +79,26 @@ class FFTImageDataset(Dataset):
         }, label
 
 
+class ImageDataset(Dataset):
+    def __init__(self, image_folder, transform_rgb=None):
+        self.dataset = image_folder
+        self.transform_rgb = transform_rgb
+
+    def __len__(self):
+        return len(self.dataset)
+
+    def __getitem__(self, idx):
+        image, label = self.dataset[idx]
+        if self.transform_rgb:
+            rgb_input = self.transform_rgb(image)
+        else:
+            rgb_input = to_tensor(image)
+
+        return {
+            "rgb_input": rgb_input
+        }, label
+
+
 class FocalLoss(nn.Module):
     def __init__(self, alpha=0.25, gamma=2):
         super(FocalLoss, self).__init__()
@@ -86,3 +110,19 @@ class FocalLoss(nn.Module):
         pt = torch.exp(-BCE)
         focal_loss = self.alpha * (1 - pt) ** self.gamma * BCE
         return focal_loss.mean()
+
+def gradcam_on_branch(branch_model, input_tensor, target_layer, device):
+    branch_model.eval().to(device)
+    cam = GradCAM(model=branch_model, target_layers=[target_layer])
+
+    grayscale_cam = cam(input_tensor=input_tensor.to(device),
+                        targets=[ClassifierOutputTarget(0)])[0]
+
+    base_img = input_tensor.squeeze().permute(1, 2, 0).cpu().numpy() \
+        if input_tensor.shape[1] == 3 else \
+        np.repeat(input_tensor.squeeze().cpu().numpy()[..., None], 3, axis=2)
+
+    base_img = (base_img - base_img.min()) / (base_img.max() - base_img.min() + 1e-8)
+    vis = show_cam_on_image(base_img, grayscale_cam, use_rgb=True)
+
+    return vis
