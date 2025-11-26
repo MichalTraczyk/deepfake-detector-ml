@@ -1,5 +1,5 @@
 data/
-data_processed/
+data/02_processed/data_processed/
 data_split/
 *.weights.h5
 *.keras
@@ -254,3 +254,51 @@ fabric.properties
 
 # Android studio 3.1+ serialized cache file
 .idea/caches/build_file_checksums.ser
+
+conf/local/**
+!conf/local/.gitkeep
+.telemetry
+
+# ignore potentially sensitive credentials files
+conf/**/*credentials*
+
+# ignore everything in the following folders
+data/**
+
+# except their sub-folders
+!data/**/
+
+# also keep all .gitkeep files
+!.gitkeep
+
+# ignore kedro-viz metadata
+.viz
+
+# IntelliJ
+.idea/
+*.iml
+
+### macOS
+*.DS_Store
+.AppleDouble
+.LSOverride
+.Trashes
+
+# Vim
+*~
+.*.swo
+.*.swp
+
+\#*\#
+/.emacs.desktop
+/.emacs.desktop.lock
+*.elc
+
+### Python template
+*$py.class
+
+# pyenv
+.python-version
+
+# mlflow local runs
+mlruns/*

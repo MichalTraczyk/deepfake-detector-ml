@@ -1,7 +1,7 @@
 import torch
 import torch.nn.functional as F
 import torchvision.models as models
-from src.models.vit.model_vit import ModelViT
+from deepfake_detector.modules.vit.model_vit import ModelViT
 
 
 def load_pretrained_weights(model: ModelViT) -> ModelViT:

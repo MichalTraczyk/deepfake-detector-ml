@@ -19,6 +19,7 @@ def process_image(image):
     global image_processor
     face = image_processor.get_face(image)
     return face
+
 def get_processed_video_names(dir_path):
     names = set()
     for filename in os.listdir(dir_path):
@@ -28,7 +29,7 @@ def get_processed_video_names(dir_path):
     return names
 
 def split_images_to_train_val_test():
-    base_dir = 'data_processed'
+    base_dir = 'data/02_processed/data_processed'
     temp_dirs = {
         'real': os.path.join(base_dir, 'real'),
         'fake': os.path.join(base_dir, 'fake')
@@ -104,7 +105,7 @@ if __name__ == "__main__":
     save_directory = "data_processed/"
     os.makedirs(save_directory, exist_ok=True)
 
-    data_common_path = "data/Celeb-DF-v2/"
+    data_common_path = "data/01_raw/Celeb-DF-v2/"
     real_paths = [
         data_common_path + "Celeb-real",
         data_common_path + "YouTube-real"
