@@ -40,4 +40,4 @@ Pozatym do testow zainstaluj pip install pytest
 
 a reszta w requirments.txt
 jak cos jeszcze bede pewnie zmienial zeby bylo bardziej przejrzyste ale wyjebane
-a i jeszcze trening odpalasz w taki sposob kedro run --pipeline training_pipeline_cnn itd reszte nazw masz w pipeline registry
+a i jeszcze trening odpalasz w taki sposob kedro run --pipeline training_cnn itd reszte nazw masz w pipeline registry
