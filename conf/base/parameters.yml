@@ -6,7 +6,7 @@ learning_settings:
   cnn_training_epochs: 50
   checkpoint_path_vit: "saved/vit_checkpoint.pt"
   checkpoint_path_cnn: "saved/cnn_checkpoint.pt"
-  data_dir: "data_processed"
+  data_dir: "data/02_processed"
 
 vit_model:
   patch_size: 16

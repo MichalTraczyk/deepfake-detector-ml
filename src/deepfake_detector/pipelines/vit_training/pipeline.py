@@ -7,18 +7,18 @@ def create_pipeline(**kwargs) -> Pipeline:
             func=create_dataloaders,
             inputs="params:learning_settings",
             outputs="data_loaders",
-            name="create_data_node"
+            name="create_vit_dataloaders_node"
         ),
         node(
             func=run_training_loop,
             inputs=["data_loaders", "params:learning_settings", "params:vit_model"],
             outputs="trained_model_vit",
-            name="training_node"
+            name="train_vit_model_node"
         ),
         node(
             func=run_final_evaluation,
             inputs=["trained_model_vit", "data_loaders", "params:learning_settings"],
             outputs="final_metrics_vit",
-            name="evaluation_node"
+            name="evaluate_vit_model_node"
         )
     ])
