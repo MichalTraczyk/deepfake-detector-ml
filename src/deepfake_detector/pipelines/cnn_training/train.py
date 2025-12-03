@@ -97,6 +97,9 @@ def train(loaders: dict, params: dict):
         del model, optimizer, fold_train_loader, fold_val_loader
         torch.cuda.empty_cache()
 
+        print("Memory allocated:", torch.cuda.memory_allocated() / 1024 ** 2, "MB")
+        print("Memory reserved:", torch.cuda.memory_reserved() / 1024 ** 2, "MB")
+
     final_model = MultiInputModel().to(device)
     optimizer = torch.optim.Adam(final_model.parameters(), lr=1e-4)
     final_model, _, _ = load_checkpoint(final_model, optimizer, fold_checkpoint_path, device)
@@ -110,7 +113,6 @@ def run_final_evaluation(model, loaders: dict, params: dict):
     optimizer = torch.optim.Adam(model.parameters(), lr=1e-4)
 
     model, _, _ = load_checkpoint(model, optimizer, checkpoint_path, device)
-
     ev = evaluate_model_metrics(model,test_loader,device,transformation=torch.sigmoid)
     print(ev)
     return ev
