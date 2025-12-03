@@ -28,46 +28,79 @@ def get_processed_video_names(dir_path):
             names.add(base_name)
     return names
 
-def split_images_to_train_val_test():
-    base_dir = 'data/02_processed/data_processed'
+
+def split_images_to_dirs():
+    base_dir = 'data/02_processed'
     temp_dirs = {
         'real': os.path.join(base_dir, 'real'),
         'fake': os.path.join(base_dir, 'fake')
     }
-    split_ratios = {'train': 0.7, 'val': 0.15, 'test': 0.15}
+
+    target_train_ratio = 0.8
     classes = ['real', 'fake']
+
     random.seed(42)
 
-    # Create output folders inside base_dir
-    for split in split_ratios:
+    for split in ['train', 'test']:
         for cls in classes:
             os.makedirs(os.path.join(base_dir, split, cls), exist_ok=True)
 
     for cls in classes:
         src_dir = temp_dirs[cls]
+        if not os.path.exists(src_dir):
+            continue
+
         files = [f for f in os.listdir(src_dir) if os.path.isfile(os.path.join(src_dir, f))]
-        random.shuffle(files)
+        video_groups = {}
 
-        total = len(files)
-        train_end = int(total * split_ratios['train'])
-        val_end = train_end + int(total * split_ratios['val'])
+        for f in files:
+            if "_frame_" in f:
+                video_id = f.split("_frame_")[0]
+                if video_id not in video_groups:
+                    video_groups[video_id] = []
+                video_groups[video_id].append(f)
 
-        splits = {
-            'train': files[:train_end],
-            'val': files[train_end:val_end],
-            'test': files[val_end:]
-        }
+        total_frames_in_class = len(files)
+        target_train_frames = int(total_frames_in_class * target_train_ratio)
 
-        for split_name, split_files in splits.items():
-            for file in split_files:
-                src_path = os.path.join(src_dir, file)
-                dst_path = os.path.join(base_dir, split_name, cls, file)
-                shutil.move(src_path, dst_path)
+        video_ids = list(video_groups.keys())
+        random.shuffle(video_ids)
 
-        # Remove the empty temp class directory
-        os.rmdir(src_dir)
+        train_videos = []
+        test_videos = []
 
-    print("✅ Files split into train/val/test inside 'data_processed/'.")
+        current_train_frames = 0
+
+        for vid in video_ids:
+            frames_in_video = len(video_groups[vid])
+
+            if current_train_frames < target_train_frames:
+                train_videos.append(vid)
+                current_train_frames += frames_in_video
+            else:
+                test_videos.append(vid)
+
+        actual_train_ratio = current_train_frames / total_frames_in_class
+        print(f"[{cls.upper()}] Total Frames: {total_frames_in_class}")
+        print(f"   - Target Split: 80% / 20%")
+        print(f"   - Actual Split: {actual_train_ratio:.2%} / {(1 - actual_train_ratio):.2%}")
+        print(f"   - Train Videos: {len(train_videos)} | Test Videos: {len(test_videos)}")
+
+        for vid in train_videos:
+            for file in video_groups[vid]:
+                shutil.move(os.path.join(src_dir, file), os.path.join(base_dir, 'train', cls, file))
+
+        for vid in test_videos:
+            for file in video_groups[vid]:
+                shutil.move(os.path.join(src_dir, file), os.path.join(base_dir, 'test', cls, file))
+
+        # Cleanup
+        try:
+            os.rmdir(src_dir)
+        except:
+            pass
+
+    print("✅ Split complete. Balanced by Frame Count, Grouped by Video ID.")
 
 
 def process_video(video_path, output_path):
@@ -102,7 +135,7 @@ def process_video(video_path, output_path):
 if __name__ == "__main__":
     if torch.cuda.is_available():
         print("Usibng gpu!")
-    save_directory = "data_processed/"
+    save_directory = "data/02_processed/"
     os.makedirs(save_directory, exist_ok=True)
 
     data_common_path = "data/01_raw/Celeb-DF-v2/"
@@ -177,4 +210,4 @@ if __name__ == "__main__":
                 pbar.update(1)
                 i += 1
 
-    split_images_to_train_val_test()
+    split_images_to_dirs()

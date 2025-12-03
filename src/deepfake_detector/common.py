@@ -13,8 +13,12 @@ from pytorch_grad_cam.utils.image import show_cam_on_image
 from pytorch_grad_cam.utils.model_targets import ClassifierOutputTarget
 
 class BalancedBatchSampler(Sampler):
-    def __init__(self, dataset, batch_size):
-        self.labels = [label for _, label in dataset]
+    def __init__(self, dataset, batch_size, custom_labels=None):
+
+        if custom_labels is not None:
+            self.labels = custom_labels
+        else:
+            self.labels = [label for _, label in dataset]
         self.label_to_indices = defaultdict(list)
 
         for idx, label in enumerate(self.labels):

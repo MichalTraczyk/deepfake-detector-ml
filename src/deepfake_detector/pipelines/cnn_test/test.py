@@ -9,7 +9,7 @@ from pytorch_grad_cam.utils.image import show_cam_on_image
 from pytorch_grad_cam.utils.model_targets import ClassifierOutputTarget
 
 from deepfake_detector.modules.cnn.model_cnn import MultiInputModel
-from deepfake_detector.common import FFTImageDataset
+from deepfake_detector.common import ImageDataset
 from deepfake_detector.utils.checkpoint import load_checkpoint
 
 
@@ -27,19 +27,6 @@ class RGBBranchWrapper(nn.Module):
         return self.rgb_base(x)
 
 
-class FFTBranchWrapper(nn.Module):
-    def __init__(self, model):
-        super().__init__()
-        self.fft_branch = model.fft_branch
-
-    def forward(self, x):
-        x = self.fft_branch(x).view(x.size(0), -1)
-        return x
-
-
-# ----------------------
-# Grad-CAM runner
-# ----------------------
 def gradcam_on_branch(branch_model, input_tensor, target_layer, device):
     branch_model.eval().to(device)
     cam = GradCAM(model=branch_model, target_layers=[target_layer])
@@ -72,36 +59,25 @@ def create_cnn_gradcam_visualization(params: dict):
     ])
 
     test_data = ImageFolder(os.path.join(data_dir, 'test'))
-    test_dataset = FFTImageDataset(test_data, transform_rgb)
+    test_dataset = ImageDataset(test_data, transform_rgb)
 
     # ----------------------
     # Load model checkpoint
     # ----------------------
     model = MultiInputModel().to(device)
     optimizer = torch.optim.Adam(model.parameters(), lr=1e-4)
-    checkpoint_path = "saved/cnn_checkpoint.pt"
+    checkpoint_path = "data/03_models/cnn_model.pt"
     model, optimizer, start_epoch = load_checkpoint(model, optimizer, checkpoint_path, device)
 
     # ----------------------
     # Take one sample from test set
     # ----------------------
-    (inputs, label) = test_dataset[6]
+    (inputs, label) = test_dataset[3]
     rgb_tensor = inputs["rgb_input"].unsqueeze(0)
-    fft_tensor = inputs["fft_input"].unsqueeze(0)
 
-    # ----------------------
-    # Run Grad-CAM for RGB branch
-    # ----------------------
     rgb_wrapper = RGBBranchWrapper(model)
-    target_layer_rgb = rgb_wrapper.rgb_base.features[-1][0]
+    target_layer_rgb = rgb_wrapper.rgb_base.features[-2][0]
     vis_rgb = gradcam_on_branch(rgb_wrapper, rgb_tensor, target_layer_rgb, device)
-
-    # ----------------------
-    # Run Grad-CAM for FFT branch
-    # ----------------------
-    fft_wrapper = FFTBranchWrapper(model)
-    target_layer_fft = fft_wrapper.fft_branch[3]  # Conv2d(16 -> 32)
-    vis_fft = gradcam_on_branch(fft_wrapper, fft_tensor, target_layer_fft, device)
 
     # ----------------------
     # Display side-by-side
@@ -110,11 +86,6 @@ def create_cnn_gradcam_visualization(params: dict):
     axes[0].imshow(vis_rgb)
     axes[0].set_title("RGB Branch Grad-CAM")
     axes[0].axis("off")
-
-    axes[1].imshow(vis_fft)
-    axes[1].set_title("FFT Branch Grad-CAM")
-    axes[1].axis("off")
-
     plt.tight_layout()
 
     return fig

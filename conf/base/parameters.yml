@@ -1,5 +1,6 @@
 learning_settings:
   image_resolution: 256
+  k_folds: 5
   batch_size: 30
   num_epochs: 20
   learning_rate: 0.0001
