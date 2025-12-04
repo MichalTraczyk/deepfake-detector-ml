@@ -2,17 +2,15 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torchvision.models as models
-from .model_vit import ModelViT
+import math
 
 
-def load_pretrained_weights(model: ModelViT) -> ModelViT:
-    print("Wczytywanie wag pretrained (ViT) z torchvision...")
+def load_pretrained_weights(model):
 
     try:
         weights = models.VisionTransformer_Weights.IMAGENET1K_V1
         pretrained_dict = weights.get_state_dict()
     except AttributeError:
-        print("Starsza wersja torchvision: pobieranie wag z modelu...")
         temp_model = models.vit_b_16(pretrained=True)
         pretrained_dict = temp_model.state_dict()
 
@@ -22,28 +20,29 @@ def load_pretrained_weights(model: ModelViT) -> ModelViT:
         new_key = key
 
         if key == 'class_token':
-            new_key = 'cls_token'
-        elif key.startswith('conv_proj'):
-            new_key = key.replace('conv_proj', 'patch_embed.projection')
+            new_key = 'embeddings_block.cls_token'
+
         elif key == 'encoder.pos_embedding':
-            new_key = 'pos_embedding'
+            new_key = 'embeddings_block.position_embeddings'
+
+        elif key.startswith('conv_proj'):
+            new_key = key.replace('conv_proj', 'embeddings_block.patcher.0')
 
         elif key.startswith('encoder.layers.encoder_layer_'):
             parts = key.split('.')
             layer_idx = parts[2].split('_')[-1]
 
-            new_prefix = f"transformer_encoder.layers.{layer_idx}"
+            new_prefix = f"encoder_blocks.layers.{layer_idx}"
 
             suffix = ".".join(parts[3:])
 
             suffix = suffix.replace('ln_1', 'norm1')
             suffix = suffix.replace('ln_2', 'norm2')
-
             suffix = suffix.replace('self_attention', 'self_attn')
 
             if 'mlp.linear_1' in suffix:
                 suffix = suffix.replace('mlp.linear_1', 'linear1')
-            elif 'mlp.0' in suffix:
+            elif 'mlp.0' in suffix:  # Czasami linear_1 jest jako 0
                 suffix = suffix.replace('mlp.0', 'linear1')
 
             if 'mlp.linear_2' in suffix:
@@ -58,27 +57,47 @@ def load_pretrained_weights(model: ModelViT) -> ModelViT:
 
         new_state_dict[new_key] = value
 
-    if 'pos_embedding' in new_state_dict:
-        if model.pos_embedding.shape != new_state_dict['pos_embedding'].shape:
-            print(f"Interpolacja osadzeń: {new_state_dict['pos_embedding'].shape} -> {model.pos_embedding.shape}")
-            pos_embed_pretrained = new_state_dict['pos_embedding']
-            cls_token = pos_embed_pretrained[:, 0:1]
-            patch_embed = pos_embed_pretrained[:, 1:]
-            orig_size = int(patch_embed.shape[1] ** 0.5)
-            new_size = int((model.pos_embedding.shape[1] - 1) ** 0.5)
-            embed_dim = model.embed_dim
-            patch_embed = patch_embed.transpose(1, 2).reshape(1, embed_dim, orig_size, orig_size)
-            patch_embed = F.interpolate(patch_embed, size=(new_size, new_size), mode='bicubic', align_corners=False)
-            patch_embed = patch_embed.flatten(2).transpose(1, 2)
-            new_state_dict['pos_embedding'] = torch.cat((cls_token, patch_embed), dim=1)
+    pos_key_model = 'embeddings_block.position_embeddings'
+
+    if pos_key_model in new_state_dict:
+        pos_embed_pretrained = new_state_dict[pos_key_model]
+
+        pos_embed_model = model.embeddings_block.position_embeddings
+
+        if pos_embed_model.shape != pos_embed_pretrained.shape:
+
+            cls_token = pos_embed_pretrained[:, 0:1, :]
+            patch_tokens = pos_embed_pretrained[:, 1:, :]
+
+            embed_dim = pos_embed_model.shape[2]
+
+            num_tokens_old = patch_tokens.shape[1]
+            gs_old = int(math.sqrt(num_tokens_old))
+            num_tokens_new = pos_embed_model.shape[1] - 1
+            gs_new = int(math.sqrt(num_tokens_new))
+
+            patch_tokens = patch_tokens.permute(0, 2, 1).reshape(1, embed_dim, gs_old, gs_old)
+
+            patch_tokens = F.interpolate(
+                patch_tokens,
+                size=(gs_new, gs_new),
+                mode='bicubic',
+                align_corners=False
+            )
+
+            patch_tokens = patch_tokens.flatten(2).permute(0, 2, 1)
+
+            new_pos_embed = torch.cat((cls_token, patch_tokens), dim=1)
+
+            new_state_dict[pos_key_model] = new_pos_embed
 
     msg = model.load_state_dict(new_state_dict, strict=False)
 
-    missing_encoder = [k for k in msg.missing_keys if 'transformer_encoder' in k]
+    missing_encoder = [k for k in msg.missing_keys if 'encoder_blocks' in k]
     if len(missing_encoder) > 0:
-        print(f"Nadal brakuje {len(missing_encoder)} kluczy encodera!")
-        print(f"Przykłady braków: {missing_encoder[:3]}")
+        print(f"Brakuje {len(missing_encoder)} kluczy w encoderze")
+        print(f"Przykłady: {missing_encoder[:3]}")
     else:
-        print("Wszystkie warstwy Transformera załadowane poprawnie!")
+        print("Wagi transformera załadowane poprawnie")
 
     return model
