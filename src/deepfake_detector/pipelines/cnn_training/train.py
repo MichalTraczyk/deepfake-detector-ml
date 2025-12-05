@@ -59,13 +59,10 @@ def train(loaders: dict, params: dict):
 
     return final_model
 
+
 def run_final_evaluation(model, loaders: dict, params: dict):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    checkpoint_path = params['checkpoint_path_cnn']
     test_loader = loaders['test']
-    optimizer = torch.optim.Adam(model.parameters(), lr=1e-4)
-
-    model, _, _ = load_checkpoint(model, optimizer, checkpoint_path, device)
-    ev = evaluate_model_metrics(model,test_loader,device,transformation=torch.sigmoid)
+    ev = evaluate_model_metrics(model, test_loader, device, transformation=torch.sigmoid)
     print(ev)
     return ev

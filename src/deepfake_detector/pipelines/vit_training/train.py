@@ -5,7 +5,7 @@ import torch.optim as optim
 from torch.utils.data import DataLoader
 from torchvision import transforms
 from torchvision.datasets import ImageFolder
-from deepfake_detector.utils.metrics import evaluate_train_accuracy
+from deepfake_detector.utils.metrics import evaluate_train_accuracy, evaluate_model_metrics
 from deepfake_detector.modules.vit.model_vit import ModelViT
 from deepfake_detector.modules.vit.model_utils import load_pretrained_weights
 from deepfake_detector.utils.checkpoint import save_checkpoint, load_checkpoint
@@ -77,14 +77,7 @@ def run_training_loop(loaders: dict, params: dict, vit_params: dict):
 
 def run_final_evaluation(model, loaders: dict, params: dict):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
-    checkpoint_path = params['checkpoint_path_vit']
-    optimizer = optim.AdamW(model.parameters(), lr=1e-4)
-    model, _, _ = load_checkpoint(model, optimizer, checkpoint_path, device)
-
-    criterion = nn.BCEWithLogitsLoss()
-    test_loss, test_acc, test_f1 = evaluate_train_accuracy(model, loaders['test'], criterion, device)
-    results = {"loss": test_loss, "acc": test_acc, "f1_fake": test_f1}
-    print(f"\n--- WYNIKI TESTU ---\n{results}")
-
-    return results
+    test_loader = loaders['test']
+    ev = evaluate_model_metrics(model, test_loader, device, transformation=torch.sigmoid)
+    print(ev)
+    return ev
