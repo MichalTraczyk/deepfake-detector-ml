@@ -8,7 +8,6 @@ import torch
 class ImageFaceProcessor:
     def __init__(self, resolution):
         self.resolution = resolution
-        self.aligner = face_alignment.FaceAlignment(face_alignment.LandmarksType.TWO_D, flip_input=False, device=('cuda' if torch.cuda.is_available() else 'cpu'))
 
     def is_blurry(self, image, lap_threshold=3.0, ten_threshold=15):
         gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
