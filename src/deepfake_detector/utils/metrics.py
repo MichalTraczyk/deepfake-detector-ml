@@ -19,7 +19,7 @@ def compute_classification_metrics(y_true, y_pred, average="weighted"):
     }
 
 
-def evaluate_model_metrics(model, dataloader, device="cpu", threshold=0.5, transformation=None):
+def evaluate_model_metrics(model, dataloader, device="cpu", threshold=0.5, transformation=None, input_key=None):
     model.eval()
     model.to(device)
 
@@ -31,7 +31,11 @@ def evaluate_model_metrics(model, dataloader, device="cpu", threshold=0.5, trans
             inputs = {k: v.to(device) for k, v in inputs.items()}
             labels = labels.to(device)
 
-            outputs = model(inputs)
+            if input_key is not None:
+                outputs = model(inputs[input_key])
+            else:
+                outputs = model(inputs)
+
             preds = None
 
             if transformation is None:
@@ -44,7 +48,7 @@ def evaluate_model_metrics(model, dataloader, device="cpu", threshold=0.5, trans
     return compute_classification_metrics(all_labels, all_preds)
 
 
-def evaluate_train_accuracy(model, loader, criterion, device="cpu",transformation=None):
+def evaluate_train_accuracy(model, loader, criterion, device="cpu",transformation=None, input_key: str = None):
     model.eval()
     running_loss = 0
     correct = 0
@@ -55,7 +59,11 @@ def evaluate_train_accuracy(model, loader, criterion, device="cpu",transformatio
             inputs = {k: v.to(device) for k, v in inputs.items()}
             labels = labels.float().unsqueeze(1).to(device)
 
-            outputs = model(inputs)
+            if input_key is not None:
+                outputs = model(inputs[input_key])
+            else:
+                outputs = model(inputs)
+
             loss = criterion(outputs, labels)
 
             running_loss += loss.item() * labels.size(0)

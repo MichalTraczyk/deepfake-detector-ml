@@ -72,7 +72,7 @@ def train_k_fold(loaders: dict, params: dict, checkpoint_path: str, model_factor
 
         for epoch in range(num_epochs):
             train_loss, train_acc = train_one_epoch(model, fold_train_loader, optimizer, criterion, device, input_key=input_key)
-            val_loss, val_acc = evaluate_train_accuracy(model, fold_val_loader, criterion, device,transformation=torch.sigmoid)
+            val_loss, val_acc = evaluate_train_accuracy(model, fold_val_loader, criterion, device,transformation=torch.sigmoid, input_key=input_key)
 
             print(f"Fold {fold + 1} [Ep {epoch + 1}] "
                   f"Train Loss: {train_loss:.4f} Acc: {train_acc:.4f} | "

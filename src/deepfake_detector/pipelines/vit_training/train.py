@@ -1,14 +1,11 @@
 import os
 import torch
-import torch.nn as nn
-import torch.optim as optim
 from torch.utils.data import DataLoader
 from torchvision import transforms
 from torchvision.datasets import ImageFolder
-from deepfake_detector.utils.metrics import evaluate_train_accuracy, evaluate_model_metrics
+from deepfake_detector.utils.metrics import evaluate_model_metrics
 from deepfake_detector.modules.vit.model_vit import ModelViT
 from deepfake_detector.modules.vit.model_utils import load_pretrained_weights
-from deepfake_detector.utils.checkpoint import save_checkpoint, load_checkpoint
 from deepfake_detector.utils.augment import AdvancedAugment
 from deepfake_detector.common import ImageDataset, BalancedBatchSampler
 from deepfake_detector.utils.train_utils import train_k_fold
@@ -78,6 +75,6 @@ def run_training_loop(loaders: dict, params: dict, vit_params: dict):
 def run_final_evaluation(model, loaders: dict, params: dict):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     test_loader = loaders['test']
-    ev = evaluate_model_metrics(model, test_loader, device, transformation=torch.sigmoid)
+    ev = evaluate_model_metrics(model, test_loader, device, transformation=torch.sigmoid, input_key="rgb_input")
     print(ev)
     return ev
