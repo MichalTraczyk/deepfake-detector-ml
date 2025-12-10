@@ -1,15 +1,15 @@
 import torch
 import pytest
-from deepfake_detector.modules.cnn.model_cnn import MultiInputModel
+from deepfake_detector.modules.cnn.model_cnn import CnnModel
 
 
 def test_cnn_initialization():
-    model = MultiInputModel()
+    model = CnnModel()
     assert model is not None
 
 
 def test_cnn_forward_tensor_shapes():
-    model = MultiInputModel()
+    model = CnnModel()
 
     rgb_dummy = torch.randn(2, 3, 256, 256)
     fft_dummy = torch.randn(2, 3, 256, 256)
@@ -25,7 +25,7 @@ def test_cnn_forward_tensor_shapes():
 
 
 def test_cnn_forward_missing_key():
-    model = MultiInputModel()
+    model = CnnModel()
     rgb_dummy = torch.randn(1, 3, 256, 256)
 
     bad_dict = {'rgb_input': rgb_dummy}

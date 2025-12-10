@@ -8,7 +8,7 @@ from pytorch_grad_cam import GradCAM
 from pytorch_grad_cam.utils.image import show_cam_on_image
 from pytorch_grad_cam.utils.model_targets import ClassifierOutputTarget
 
-from deepfake_detector.modules.cnn.model_cnn import MultiInputModel
+from deepfake_detector.modules.cnn.model_cnn import CnnModel
 from deepfake_detector.common import ImageDataset
 from deepfake_detector.utils.checkpoint import load_checkpoint
 
@@ -64,7 +64,7 @@ def create_cnn_gradcam_visualization(params: dict):
     # ----------------------
     # Load model checkpoint
     # ----------------------
-    model = MultiInputModel().to(device)
+    model = CnnModel().to(device)
     optimizer = torch.optim.Adam(model.parameters(), lr=1e-4)
     checkpoint_path = "data/03_models/cnn_model.pt"
     model, optimizer, start_epoch = load_checkpoint(model, optimizer, checkpoint_path, device)
