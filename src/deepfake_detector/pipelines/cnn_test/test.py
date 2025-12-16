@@ -43,10 +43,14 @@ def get_test_dataloader(params: dict):
     test_loader = DataLoader(test_dataset, batch_size=batch_size)
     return test_loader
 
-def get_test_model(params: dict):
+def get_test_model(paths:dict):
+    checkpoint_path = paths["cnn_model_path"]
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model = CnnModel()
+    optimizer = torch.optim.Adam(model.parameters())
+    model, _, _ = load_checkpoint(model, optimizer, checkpoint_path, device)
     model.to(device)
+    model.eval()
     return model
 
 def run_evaluation(model, test_loader):
@@ -54,7 +58,7 @@ def run_evaluation(model, test_loader):
     ev = evaluate_model_metrics(model, test_loader, device, transformation=torch.sigmoid)
     ev["confusion_matrix"] = str(ev["confusion_matrix"])
     plot = get_roc_plot(roc_curve_fpr=ev["roc_curve_fpr"],roc_curve_tpr=ev["roc_curve_tpr"])
-    plot.savefig("data/04_reporting/roc_plot.png")
+    plot.savefig("data/04_reporting/cnn_roc_plot.png")
     return ev
 
 

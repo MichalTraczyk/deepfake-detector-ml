@@ -11,18 +11,18 @@ def create_pipeline(**kwargs) -> Pipeline:
     ),
         node(
             func=get_test_model,
-            inputs="params:learning_settings",
-            outputs="cnn_model",
+            inputs="params:paths",
+            outputs="test_model",
             name="cnn_model_node"
         ),
         node(
             func=run_evaluation,
-            inputs=["cnn_model", "test_dataloader"],
+            inputs=["test_model", "test_dataloader"],
             outputs="final_metrics_cnn"
         ),
         node(
             func=create_cnn_gradcam_visualization,
-            inputs=["test_dataloader", "cnn_model"],
+            inputs=["test_dataloader", "test_model"],
             outputs="cnn_gradcam_plot",
             name="cnn_gradcam_plot"
         )

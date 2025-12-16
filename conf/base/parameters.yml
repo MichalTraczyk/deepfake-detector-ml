@@ -9,6 +9,10 @@ learning_settings:
   checkpoint_path_cnn: "saved/cnn_checkpoint.pt"
   data_dir: "data/02_processed"
 
+paths:
+  cnn_model_path: "data/03_models/cnn_model.pt"
+  vit_model_path: "data/03_models/vit_model.pt"
+
 vit_model:
   patch_size: 16
   embed_dim: 768
