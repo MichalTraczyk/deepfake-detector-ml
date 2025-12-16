@@ -1,12 +1,29 @@
 from kedro.pipeline import Pipeline, node, pipeline
-from .test import create_cnn_gradcam_visualization
+from .test import create_cnn_gradcam_visualization, get_test_dataloader, get_test_model, run_evaluation
+
 
 def create_pipeline(**kwargs) -> Pipeline:
-    return pipeline([
+    return pipeline([node(
+        func=get_test_dataloader,
+        inputs="params:learning_settings",
+        outputs="test_dataloader",
+        name="loaders_node"
+    ),
+        node(
+            func=get_test_model,
+            inputs="params:learning_settings",
+            outputs="cnn_model",
+            name="cnn_model_node"
+        ),
+        node(
+            func=run_evaluation,
+            inputs=["cnn_model", "test_dataloader"],
+            outputs="final_metrics_cnn"
+        ),
         node(
             func=create_cnn_gradcam_visualization,
-            inputs="params:learning_settings",
+            inputs=["test_dataloader", "cnn_model"],
             outputs="cnn_gradcam_plot",
-            name="cnn_gradcam_node"
+            name="cnn_gradcam_plot"
         )
     ])

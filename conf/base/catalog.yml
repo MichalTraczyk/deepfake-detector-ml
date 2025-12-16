@@ -21,6 +21,6 @@ final_metrics_cnn:
   type: json.JSONDataset
   filepath: data/04_reporting/cnn_metrics.json
 
-cnn_gradcam_plot:
-  type: matplotlib.MatplotlibWriter
-  filepath: data/04_reporting/cnn_gradcam.png
+#cnn_gradcam_plot:
+#  type: kedro_datasets.matplotlib.MatplotlibWriter
+#  filepath: data/04_reporting/cnn_gradcam.png

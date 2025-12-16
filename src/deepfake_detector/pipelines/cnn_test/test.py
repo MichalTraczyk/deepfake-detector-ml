@@ -2,14 +2,13 @@ import os
 import torch
 import numpy as np
 import matplotlib.pyplot as plt
+from torch.utils.data import DataLoader
 from torchvision import transforms
 from torchvision.datasets import ImageFolder
-from pytorch_grad_cam import GradCAM
-from pytorch_grad_cam.utils.image import show_cam_on_image
-from pytorch_grad_cam.utils.model_targets import ClassifierOutputTarget
 
 from deepfake_detector.modules.cnn.model_cnn import CnnModel
 from deepfake_detector.common import ImageDataset
+from deepfake_detector.test import gradcam_on_branch
 from deepfake_detector.utils.checkpoint import load_checkpoint
 
 
@@ -17,6 +16,9 @@ from deepfake_detector.utils.checkpoint import load_checkpoint
 # Branch wrappers
 # ----------------------
 import torch.nn as nn
+
+from deepfake_detector.utils.metrics import evaluate_model_metrics, get_roc_plot
+
 
 class RGBBranchWrapper(nn.Module):
     def __init__(self, model):
@@ -26,66 +28,58 @@ class RGBBranchWrapper(nn.Module):
     def forward(self, x):
         return self.rgb_base(x)
 
-
-def gradcam_on_branch(branch_model, input_tensor, target_layer, device):
-    branch_model.eval().to(device)
-    cam = GradCAM(model=branch_model, target_layers=[target_layer])
-
-    grayscale_cam = cam(input_tensor=input_tensor.to(device),
-                        targets=[ClassifierOutputTarget(0)])[0]
-
-    base_img = input_tensor.squeeze().permute(1, 2, 0).cpu().numpy() \
-        if input_tensor.shape[1] == 3 else \
-        np.repeat(input_tensor.squeeze().cpu().numpy()[..., None], 3, axis=2)
-
-    base_img = (base_img - base_img.min()) / (base_img.max() - base_img.min() + 1e-8)
-    vis = show_cam_on_image(base_img, grayscale_cam, use_rgb=True)
-
-    return vis
-
-
-# ----------------------
-# Load config and data
-# ----------------------
-def create_cnn_gradcam_visualization(params: dict):
-
+def get_test_dataloader(params: dict):
     res = params['image_resolution']
+    batch_size = params['batch_size']
     data_dir = "data/02_processed/"
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     transform_rgb = transforms.Compose([
         transforms.Resize((res, res)),
         transforms.ToTensor(),
+        transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
     ])
-
     test_data = ImageFolder(os.path.join(data_dir, 'test'))
     test_dataset = ImageDataset(test_data, transform_rgb)
+    test_loader = DataLoader(test_dataset, batch_size=batch_size)
+    return test_loader
 
-    # ----------------------
-    # Load model checkpoint
-    # ----------------------
-    model = CnnModel().to(device)
-    optimizer = torch.optim.Adam(model.parameters(), lr=1e-4)
-    checkpoint_path = "data/03_models/cnn_model.pt"
-    model, optimizer, start_epoch = load_checkpoint(model, optimizer, checkpoint_path, device)
+def get_test_model(params: dict):
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    model = CnnModel()
+    model.to(device)
+    return model
 
-    # ----------------------
-    # Take one sample from test set
-    # ----------------------
-    (inputs, label) = test_dataset[3]
-    rgb_tensor = inputs["rgb_input"].unsqueeze(0)
+def run_evaluation(model, test_loader):
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    ev = evaluate_model_metrics(model, test_loader, device, transformation=torch.sigmoid)
+    ev["confusion_matrix"] = str(ev["confusion_matrix"])
+    plot = get_roc_plot(roc_curve_fpr=ev["roc_curve_fpr"],roc_curve_tpr=ev["roc_curve_tpr"])
+    plot.savefig("data/04_reporting/roc_plot.png")
+    return ev
 
+
+def create_cnn_gradcam_visualization(loader : DataLoader, model):
+    selected_indexes = [9847,10341,8907,13796,12202,13200]
+    rows, cols = 2, 3
+    figsize = (12, 12)
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    model.eval()
     rgb_wrapper = RGBBranchWrapper(model)
     target_layer_rgb = rgb_wrapper.rgb_base.features[-2][0]
-    vis_rgb = gradcam_on_branch(rgb_wrapper, rgb_tensor, target_layer_rgb, device)
 
-    # ----------------------
-    # Display side-by-side
-    # ----------------------
-    fig, axes = plt.subplots(1, 2, figsize=(10, 5))
-    axes[0].imshow(vis_rgb)
-    axes[0].set_title("RGB Branch Grad-CAM")
-    axes[0].axis("off")
+    fig, axes = plt.subplots(rows, cols, figsize=figsize)
+    axes = np.array(axes).flatten()
+    axis = 0
+    for i in selected_indexes:
+        (inputs, label) = loader.dataset[i]
+        rgb_tensor = inputs["rgb_input"].unsqueeze(0)
+        vis_rgb = gradcam_on_branch(rgb_wrapper, rgb_tensor, target_layer_rgb, device)
+
+        ax = axes[axis]
+        axis += 1
+        ax.imshow(vis_rgb)
+        ax.set_title(f"Sample {i} (True Label: {label})")
+        ax.axis("off")
     plt.tight_layout()
-
+    plt.savefig("data/04_reporting/cnn_gradcam.png")
     return fig
