@@ -1,13 +1,13 @@
 from kedro.pipeline import Pipeline, node, pipeline
-from .test import create_vit_gradcam_visualization, get_test_model, get_test_dataloader, run_evaluation
+from .test import create_vit_gradcam_visualization, get_test_model, get_test_dataloaders, run_evaluation
 
 
 def create_pipeline(**kwargs) -> Pipeline:
     return pipeline([
         node(
-            func=get_test_dataloader,
+            func=get_test_dataloaders,
             inputs=["params:learning_settings"],
-            outputs="test_dataloader",
+            outputs=["test_dataloader_celeb_df", "test_dataloader_celeb_ff"],
             name="loaders_node"
         ),
         node(
@@ -18,8 +18,13 @@ def create_pipeline(**kwargs) -> Pipeline:
         ),
         node(
             func=run_evaluation,
-            inputs=["test_model", "test_dataloader"],
-            outputs="final_metrics_vit"
+            inputs=["test_model", "test_dataloader_celeb_df"],
+            outputs="final_metrics_vit_celeb"
+        ),
+        node(
+            func=run_evaluation,
+            inputs=["test_model", "test_dataloader_celeb_ff"],
+            outputs="final_metrics_vit_ff"
         ),
         # node(
         #     func=create_vit_gradcam_visualization,

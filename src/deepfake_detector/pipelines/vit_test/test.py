@@ -66,20 +66,28 @@ def run_gradcam(model_wrapper, input_tensor, target_layers, reshape_function, de
     return vis, base_img
 
 
-def get_test_dataloader(params: dict):
+def get_test_dataloaders(params: dict):
     res = params['image_resolution']
     batch_size = params['batch_size']
-    data_dir = "data/02_processed/"
+    data_dir_celeb = "data/02_processed/"
+    data_dir_ff = "data/face_forentics_processed/"
 
     transform_rgb = transforms.Compose([
         transforms.Resize((res, res)),
         transforms.ToTensor(),
         transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
     ])
-    test_data = ImageFolder(os.path.join(data_dir, 'test'))
+    test_data = ImageFolder(os.path.join(data_dir_celeb, 'test'))
     test_dataset = ImageDataset(test_data, transform_rgb)
     test_loader = DataLoader(test_dataset, batch_size=batch_size)
-    return test_loader
+
+    test_dataff = ImageFolder(data_dir_ff)
+    test_datasetff = ImageDataset(test_dataff, transform_rgb)
+    test_loaderff = DataLoader(test_datasetff, batch_size=batch_size)
+
+    test_loader.dataset_name = "Celeb"
+    test_loaderff.dataset_name = "Face Forentics"
+    return test_loader, test_loaderff
 
 def get_test_model(params:dict,vit_params: dict, paths:dict):
     checkpoint_path = paths["vit_model_path"]
@@ -107,7 +115,7 @@ def run_evaluation(model, test_loader):
     ev = evaluate_model_metrics(model, test_loader, device, transformation=torch.sigmoid, input_key="rgb_input")
     ev["confusion_matrix"] = str(ev["confusion_matrix"])
     plot = get_roc_plot(roc_curve_fpr=ev["roc_curve_fpr"],roc_curve_tpr=ev["roc_curve_tpr"])
-    plot.savefig("data/04_reporting/vit_roc_plot.png")
+    plot.savefig(os.path.join("data/04_reporting/",test_loader.dataset_name))
     return ev
 
 def create_vit_gradcam_visualization(model, test_loader : DataLoader, learning_params: dict, vit_params: dict):
