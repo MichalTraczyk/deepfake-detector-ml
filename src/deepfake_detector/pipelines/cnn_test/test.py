@@ -82,7 +82,7 @@ def create_cnn_gradcam_visualization(loader : DataLoader, model):
         ax = axes[axis]
         axis += 1
         ax.imshow(vis_rgb)
-        ax.set_title(f"Sample {i} (True Label: {label})")
+        ax.set_title(f"{label}")
         ax.axis("off")
     plt.tight_layout()
     plt.savefig("data/04_reporting/cnn_gradcam.png")

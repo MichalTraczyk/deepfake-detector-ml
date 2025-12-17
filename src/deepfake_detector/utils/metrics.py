@@ -110,14 +110,14 @@ def get_roc_plot(roc_curve_fpr,roc_curve_tpr):
         roc_curve_tpr,
         color='darkorange',
         lw=2,
-        label=f'ROC curve (area = {roc_auc:.2f})'
+        label=f'Krzywa ROC'
     )
-    ax.plot([0, 1], [0, 1], color='navy', lw=2, linestyle='--', label='Random Classifier (AUC = 0.50)')
+    ax.plot([0, 1], [0, 1], color='navy', lw=2, linestyle='--', label='(AUC = 0.50)')
     ax.set_xlim([0.0, 1.0])
     ax.set_ylim([0.0, 1.05])
-    ax.set_xlabel('False Positive Rate (FPR)')
-    ax.set_ylabel('True Positive Rate (TPR) / Recall')
-    ax.set_title('Receiver Operating Characteristic (ROC) Curve')
+    ax.set_xlabel('Współczynnik Fałszywie Pozytywnych (FPR)')
+    ax.set_ylabel('Współczynnik Prawdziwie Pozytywnych (TPR) / Czułość')
+    ax.set_title('Krzywa ROC')
     ax.legend(loc="lower right")
     ax.grid(True)
 
