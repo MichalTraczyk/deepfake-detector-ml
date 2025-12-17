@@ -55,7 +55,8 @@ def train(loaders: dict, params: dict):
         loaders=loaders,
         params=params,
         checkpoint_path="checkpoints/cnn_pretrained.pt",
-        model_factory=create_model
+        model_factory=create_model,
+        final_path="data/03_models/cnn_model.pt"
     )
 
     return final_model

@@ -5,17 +5,9 @@
 data_loaders:
   type: MemoryDataset
 
-trained_model_vit:
-  type: pickle.PickleDataset
-  filepath: data/03_models/vit_model.pt
-
 final_metrics_vit:
   type: json.JSONDataset
   filepath: data/04_reporting/vit_metrics.json
-
-trained_model_cnn:
-  type: pickle.PickleDataset
-  filepath: data/03_models/cnn_model.pt
 
 final_metrics_cnn:
   type: json.JSONDataset
