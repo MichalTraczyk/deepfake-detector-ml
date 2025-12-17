@@ -94,9 +94,29 @@ def train_k_fold(loaders: dict, params: dict, checkpoint_path: str, model_factor
         print("Memory allocated:", torch.cuda.memory_allocated() / 1024 ** 2, "MB")
         print("Memory reserved:", torch.cuda.memory_reserved() / 1024 ** 2, "MB")
 
+    print(f"\n{'=' * 15} TRAINING ON FULL DATASET {'=' * 15}")
+
     final_model = model_factory().to(device)
+    criterion = nn.BCEWithLogitsLoss()
     optimizer = torch.optim.Adam(final_model.parameters(), lr=1e-4)
 
-    final_model, _, _ = load_checkpoint(final_model, optimizer, fold_checkpoint_path, device)
+    train_sampler = BalancedBatchSampler(full_dataset, batch_size, custom_labels=all_targets)
+    full_train_loader = DataLoader(full_dataset, batch_sampler=train_sampler)
+
+    final_checkpoint_path = checkpoint_path.replace('.pt', '_final.pt')
+    best_train_loss = float('inf')
+
+    for epoch in range(num_epochs):
+        train_loss, train_acc = train_one_epoch(final_model, full_train_loader, optimizer, criterion, device,
+                                                input_key=input_key)
+
+        print(f"Full Dataset [Ep {epoch + 1}] Train Loss: {train_loss:.4f} Acc: {train_acc:.4f}")
+
+        if train_loss < best_train_loss:
+            best_train_loss = train_loss
+            save_checkpoint(final_model, optimizer, epoch, final_checkpoint_path)
+
+    # Load best checkpoint
+    final_model, _, _ = load_checkpoint(final_model, optimizer, final_checkpoint_path, device)
 
     return final_model
