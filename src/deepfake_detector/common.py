@@ -49,40 +49,6 @@ class BalancedBatchSampler(Sampler):
         return self.num_batches
 
 
-class FFTImageDataset(Dataset):
-    def __init__(self, image_folder, transform_rgb=None):
-        self.dataset = image_folder
-        self.transform_rgb = transform_rgb
-
-    def __len__(self):
-        return len(self.dataset)
-
-    def compute_fft(self, image):
-        gray = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
-        f = np.fft.fft2(gray)
-        fshift = np.fft.fftshift(f)
-        magnitude = 20 * np.log(np.abs(fshift) + 1e-8)
-        magnitude = cv2.normalize(magnitude, None, 0, 1, cv2.NORM_MINMAX)
-        magnitude = torch.tensor(magnitude).unsqueeze(0).float()
-        return magnitude
-
-    def __getitem__(self, idx):
-        image, label = self.dataset[idx]
-        image_np = np.array(image)
-
-        fft_input = self.compute_fft(image_np)
-
-        if self.transform_rgb:
-            rgb_input = self.transform_rgb(image)
-        else:
-            rgb_input = to_tensor(image)
-
-        return {
-            "rgb_input": rgb_input,
-            "fft_input": fft_input
-        }, label
-
-
 class ImageDataset(Dataset):
     def __init__(self, image_folder, transform_rgb=None):
         self.dataset = image_folder
@@ -101,32 +67,3 @@ class ImageDataset(Dataset):
         return {
             "rgb_input": rgb_input
         }, label
-
-
-class FocalLoss(nn.Module):
-    def __init__(self, alpha=0.25, gamma=2):
-        super(FocalLoss, self).__init__()
-        self.alpha = alpha
-        self.gamma = gamma
-
-    def forward(self, inputs, targets):
-        BCE = Fn.binary_cross_entropy(inputs, targets, reduction='none')
-        pt = torch.exp(-BCE)
-        focal_loss = self.alpha * (1 - pt) ** self.gamma * BCE
-        return focal_loss.mean()
-
-def gradcam_on_branch(branch_model, input_tensor, target_layer, device):
-    branch_model.eval().to(device)
-    cam = GradCAM(model=branch_model, target_layers=[target_layer])
-
-    grayscale_cam = cam(input_tensor=input_tensor.to(device),
-                        targets=[ClassifierOutputTarget(0)])[0]
-
-    base_img = input_tensor.squeeze().permute(1, 2, 0).cpu().numpy() \
-        if input_tensor.shape[1] == 3 else \
-        np.repeat(input_tensor.squeeze().cpu().numpy()[..., None], 3, axis=2)
-
-    base_img = (base_img - base_img.min()) / (base_img.max() - base_img.min() + 1e-8)
-    vis = show_cam_on_image(base_img, grayscale_cam, use_rgb=True)
-
-    return vis
