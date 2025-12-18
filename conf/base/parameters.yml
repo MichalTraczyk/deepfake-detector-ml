@@ -4,7 +4,6 @@ learning_settings:
   batch_size: 30
   num_epochs: 50
   learning_rate: 0.0001
-  cnn_training_epochs: 50
   checkpoint_path_vit: "saved/vit_checkpoint.pt"
   checkpoint_path_cnn: "saved/cnn_checkpoint.pt"
   data_dir: "data/02_processed"
