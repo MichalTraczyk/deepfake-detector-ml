@@ -1,9 +1,11 @@
+import os
+
 import torch
 from tqdm import tqdm
 import torch.nn as nn
 import numpy as np
 from torch.utils.data import DataLoader, Subset
-from sklearn.model_selection import StratifiedKFold
+from sklearn.model_selection import StratifiedKFold, StratifiedGroupKFold
 from deepfake_detector.utils.metrics import evaluate_train_accuracy
 from deepfake_detector.utils.checkpoint import save_checkpoint, load_checkpoint
 from deepfake_detector.common import BalancedBatchSampler
@@ -43,12 +45,18 @@ def train_k_fold(loaders: dict, params: dict, checkpoint_path: str, model_factor
     k_folds = params['k_folds']
 
     full_dataset = train_loader.dataset
+    all_samples = full_dataset.dataset.samples
     all_targets = np.array(full_dataset.dataset.targets)
-    skf = StratifiedKFold(n_splits=k_folds, shuffle=True, random_state=42)
+    video_groups = []
+    for path, _ in all_samples:
+        filename = os.path.basename(path)
+        video_id = filename.split("_frame_")[0]
+        video_groups.append(video_id)
+    video_groups = np.array(video_groups)
+    skf = StratifiedGroupKFold(n_splits=k_folds, shuffle=True, random_state=42)
+    indices = np.arange(len(all_targets))
 
-    fold_checkpoint_path = ""
-
-    for fold, (train_idx, val_idx) in enumerate(skf.split(np.zeros(len(all_targets)), all_targets)):
+    for fold, (train_idx, val_idx) in enumerate(skf.split(indices, all_targets, groups=video_groups)):
         print(f"\n{'=' * 15} FOLD {fold + 1}/{k_folds} {'=' * 15}")
 
         train_subset = Subset(full_dataset, train_idx)
@@ -62,7 +70,7 @@ def train_k_fold(loaders: dict, params: dict, checkpoint_path: str, model_factor
 
         model = model_factory().to(device)
         criterion = nn.BCEWithLogitsLoss()
-        optimizer = torch.optim.Adam(model.parameters(), lr=1e-4)
+        optimizer = torch.optim.Adam(model.parameters(), lr=params["learning_rate"])
 
         fold_checkpoint_path = checkpoint_path.replace('.pt', f'_fold{fold + 1}.pt')
 

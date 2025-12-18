@@ -8,7 +8,7 @@ from torchvision.datasets import ImageFolder
 
 from deepfake_detector.modules.cnn.model_cnn import CnnModel
 from deepfake_detector.common import ImageDataset
-from deepfake_detector.test import gradcam_on_branch
+from deepfake_detector.test import gradcam_on_branch, count_parameters
 from deepfake_detector.utils.checkpoint import load_checkpoint
 
 
@@ -51,6 +51,8 @@ def get_test_model(paths:dict):
     model, _, _ = load_checkpoint(model, optimizer, checkpoint_path, device)
     model.to(device)
     model.eval()
+    params, trainable = count_parameters(model)
+    print("Liczba parametrow: " + params)
     return model
 
 def run_evaluation(model, test_loader):
@@ -63,7 +65,8 @@ def run_evaluation(model, test_loader):
 
 
 def create_cnn_gradcam_visualization(loader : DataLoader, model):
-    selected_indexes = [9847,10341,8907,13796,12202,13200]
+    #selected_indexes = [9847,10341,8907,13796,12202,13200]
+    selected_indexes = [12200,13200,13796,13500,13400,12702]
     rows, cols = 2, 3
     figsize = (12, 12)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -82,7 +85,8 @@ def create_cnn_gradcam_visualization(loader : DataLoader, model):
         ax = axes[axis]
         axis += 1
         ax.imshow(vis_rgb)
-        ax.set_title(f"{label}")
+        l = "Fake" if label == 0 else "Real"
+        ax.set_title(f"{l}")
         ax.axis("off")
     plt.tight_layout()
     plt.savefig("data/04_reporting/cnn_gradcam.png")

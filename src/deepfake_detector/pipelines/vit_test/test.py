@@ -12,6 +12,7 @@ from torch.utils.data import DataLoader
 from deepfake_detector.common import ImageDataset
 from deepfake_detector.modules.vit.model_utils import load_pretrained_weights
 from deepfake_detector.modules.vit.model_vit import ModelViT
+from deepfake_detector.test import count_parameters
 from deepfake_detector.utils.checkpoint import load_checkpoint
 from deepfake_detector.utils.metrics import evaluate_model_metrics, get_roc_plot
 
@@ -100,6 +101,8 @@ def get_test_model(params:dict,vit_params: dict, paths:dict):
     model, _, _ = load_checkpoint(model, optimizer, checkpoint_path, device)
     model.to(device)
     model.eval()
+    params, trainable = count_parameters(model)
+    print("Liczba parametrow: " + params)
     return model
 def run_evaluation(model, test_loader):
     model.eval()
