@@ -4,7 +4,7 @@ from sklearn.model_selection import StratifiedKFold
 from torchvision import transforms
 from torchvision.datasets import ImageFolder
 import os
-from deepfake_detector.modules.cnn.model_cnn import MultiInputModel
+from deepfake_detector.modules.cnn.model_cnn import CnnModel
 from deepfake_detector.common import BalancedBatchSampler, ImageDataset
 from torch.utils.data import DataLoader, Subset
 import torch.nn as nn
@@ -24,6 +24,7 @@ def create_dataloaders(params: dict):
         transforms.Resize((res, res)),
         advanced_augment,
         transforms.ToTensor(),
+        transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
     ])
     data_dir = "data/02_processed/"
     train_data = ImageFolder(os.path.join(data_dir, 'train'))
@@ -44,7 +45,7 @@ def create_dataloaders(params: dict):
 
 
 def create_model():
-    model = MultiInputModel()
+    model = CnnModel()
 
     return model
 
@@ -54,7 +55,8 @@ def train(loaders: dict, params: dict):
         loaders=loaders,
         params=params,
         checkpoint_path="checkpoints/cnn_pretrained.pt",
-        model_factory=create_model
+        model_factory=create_model,
+        final_path="data/03_models/cnn_model.pt"
     )
 
     return final_model

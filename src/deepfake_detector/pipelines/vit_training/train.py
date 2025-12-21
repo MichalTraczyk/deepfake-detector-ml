@@ -66,7 +66,8 @@ def run_training_loop(loaders: dict, params: dict, vit_params: dict):
         params=params,
         checkpoint_path="checkpoints/vit_pretrained.pt",
         model_factory=create_pretrained_vit,
-        input_key="rgb_input"
+        input_key="rgb_input",
+        final_path="data/03_models/vit_model.pt"
     )
 
     return final_model

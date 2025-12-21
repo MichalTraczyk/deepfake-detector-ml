@@ -29,3 +29,13 @@ class ImageFaceProcessor:
         if self.is_blurry(face):
             return None
         return face
+
+# [REAL] Total Frames: 10844
+#    - Target Split: 80% / 20%
+#    - Actual Split: 80.02% / 19.98%
+#    - Train Videos: 670 | Test Videos: 166
+# [FAKE] Total Frames: 58388
+#    - Target Split: 80% / 20%
+#    - Actual Split: 80.01% / 19.99%
+#    - Train Videos: 4065 | Test Videos: 1033
+# ✅ Split complete. Balanced by Frame Count, Grouped by Video ID.
