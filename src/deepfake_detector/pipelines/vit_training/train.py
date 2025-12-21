@@ -72,7 +72,7 @@ def run_training_loop(loaders: dict, params: dict, vit_params: dict):
     return final_model
 
 
-def run_final_evaluation(model, loaders: dict, params: dict):
+def run_final_evaluation(model, loaders: dict):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     test_loader = loaders['test']
     ev = evaluate_model_metrics(model, test_loader, device, transformation=torch.sigmoid, input_key="rgb_input")

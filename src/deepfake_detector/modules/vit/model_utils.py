@@ -42,7 +42,7 @@ def load_pretrained_weights(model):
 
             if 'mlp.linear_1' in suffix:
                 suffix = suffix.replace('mlp.linear_1', 'linear1')
-            elif 'mlp.0' in suffix:  # Czasami linear_1 jest jako 0
+            elif 'mlp.0' in suffix:
                 suffix = suffix.replace('mlp.0', 'linear1')
 
             if 'mlp.linear_2' in suffix:
