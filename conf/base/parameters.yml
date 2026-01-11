@@ -4,13 +4,13 @@ learning_settings:
   batch_size: 30
   num_epochs: 50
   learning_rate: 0.0001
-  checkpoint_path_vit: "saved/vit_checkpoint.pt"
+  checkpoint_path_vit: "data/03_models/vit_pretrained_fold5.pt"
   checkpoint_path_cnn: "saved/cnn_checkpoint.pt"
   data_dir: "data/02_processed"
 
 paths:
   cnn_model_path: "data/03_models/cnn_model.pt"
-  vit_model_path: "data/03_models/vit_model.pt"
+  vit_model_path: "data/03_models/vit_pretrained_fold5.pt"
 
 vit_model:
   patch_size: 16
