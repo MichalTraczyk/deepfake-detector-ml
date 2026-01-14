@@ -26,7 +26,7 @@ def create_dataloaders(params: dict):
         transforms.ToTensor(),
         transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
     ])
-    data_dir = "data/02_processed/"
+    data_dir = params['data_dir']
     train_data = ImageFolder(os.path.join(data_dir, 'train'))
     test_data = ImageFolder(os.path.join(data_dir, 'test'))
 

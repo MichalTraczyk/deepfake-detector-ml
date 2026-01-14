@@ -1,3 +1,22 @@
+preprocess:
+  train_ratio: 0.8
+  mode_multi: "multi"
+  mode_single: "single"
+
+  celeb_df_output: "data/02_processed/celeb_df"
+  celeb_df_dirs:
+    real:
+      - "data/01_raw/Celeb-DF-v2/Celeb-real"
+      - "data/01_raw/Celeb-DF-v2/YouTube-real"
+    fake:
+      - "data/01_raw/Celeb-DF-v2/Celeb-synthesis"
+
+  forensics_output: "data/02_processed/forensics"
+  forensics_dirs:
+    real: [ "data/01_raw/face_forensics/original/" ]
+    fake: [ "data/01_raw/face_forensics/FaceShifter/" ]
+
+
 learning_settings:
   image_resolution: 256
   k_folds: 5
@@ -6,7 +25,7 @@ learning_settings:
   learning_rate: 0.0001
   checkpoint_path_vit: "saved/cnn_checkpoint.pt"
   checkpoint_path_cnn: "saved/cnn_checkpoint.pt"
-  data_dir: "data/02_processed"
+  data_dir: "data/02_processed/celeb_df"
 
 paths:
   cnn_model_path: "data/03_models/cnn_model.pt"
