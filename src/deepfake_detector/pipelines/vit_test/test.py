@@ -7,8 +7,12 @@ from torch.utils.data import DataLoader
 from torchvision import transforms
 from torchvision.datasets import ImageFolder
 from pytorch_grad_cam.utils.image import show_cam_on_image
+
+from deepfake_detector.common import ImageDataset
 from deepfake_detector.modules.vit.model_vit import ModelViT
 from pytorch_grad_cam import EigenCAM
+
+from deepfake_detector.utils.metrics import evaluate_model_metrics, get_roc_plot
 
 
 def vit_reshape_transform(tensor):
@@ -51,8 +55,8 @@ def load_vit_model_node(vit_params: dict, paths: dict, settings: dict) -> torch.
 def create_test_dataloader_node(settings: dict) -> DataLoader:
     res = settings['image_resolution']
     batch_size = 8
-
-    data_dir = os.path.join(settings['data_dir'], 'test')
+    data_dir_celeb = "data/02_processed/"
+    data_dir_ff = "data/face_forentics_processed/"
 
     transform_rgb = transforms.Compose([
         transforms.Resize((res, res)),
@@ -60,10 +64,26 @@ def create_test_dataloader_node(settings: dict) -> DataLoader:
         transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
     ])
 
-    test_data = ImageFolder(data_dir, transform=transform_rgb)
-    test_loader = DataLoader(test_data, batch_size=batch_size, shuffle=True)
-    return test_loader
+    test_data = ImageFolder(os.path.join(data_dir_celeb, 'test'))
+    test_dataset = ImageDataset(test_data, transform_rgb)
+    test_loader = DataLoader(test_dataset, batch_size=batch_size)
 
+    test_dataff = ImageFolder(data_dir_ff)
+    test_datasetff = ImageDataset(test_dataff, transform_rgb)
+    test_loaderff = DataLoader(test_datasetff, batch_size=batch_size)
+
+    test_loader.dataset_name = "Celeb"
+    test_loaderff.dataset_name = "Face Forentics"
+    return test_loader, test_loaderff
+
+
+def run_evaluation(model, test_loader):
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    ev = evaluate_model_metrics(model, test_loader, device, transformation=torch.sigmoid,input_key="rgb_input")
+    ev["confusion_matrix"] = str(ev["confusion_matrix"])
+    plot = get_roc_plot(roc_curve_fpr=ev["roc_curve_fpr"], roc_curve_tpr=ev["roc_curve_tpr"])
+    plot.savefig(os.path.join("data/04_reporting/", test_loader.dataset_name))
+    return ev
 
 import os
 import torch
@@ -123,7 +143,8 @@ def create_vit_gradcam_plot_node(model, loader):
     for axis_idx, i in enumerate(selected_indexes):
         ax = axes[axis_idx]
 
-        (inputs, label) = dataset[i]
+        (item, label) = dataset[i]
+        inputs = item["rgb_input"]
         rgb_tensor = inputs.unsqueeze(0).to(device)
 
         grayscale_cam = cam(input_tensor=rgb_tensor, targets=None)
