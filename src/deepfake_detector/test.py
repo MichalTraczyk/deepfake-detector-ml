@@ -2,6 +2,8 @@ import numpy as np
 from pytorch_grad_cam import GradCAM
 from pytorch_grad_cam.utils.image import show_cam_on_image
 from pytorch_grad_cam.utils.model_targets import ClassifierOutputTarget
+
+
 def gradcam_on_branch(branch_model, input_tensor, target_layer, device):
     branch_model.eval().to(device)
     cam = GradCAM(model=branch_model, target_layers=[target_layer])
@@ -17,3 +19,10 @@ def gradcam_on_branch(branch_model, input_tensor, target_layer, device):
     vis = show_cam_on_image(base_img, grayscale_cam, use_rgb=True)
 
     return vis
+
+
+def count_parameters(model):
+    total_params = sum(p.numel() for p in model.parameters())
+    trainable_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
+
+    return total_params, trainable_params

@@ -17,7 +17,7 @@ def create_pipeline(**kwargs) -> Pipeline:
         ),
         node(
             func=run_final_evaluation,
-            inputs=["trained_model_vit", "data_loaders", "params:learning_settings"],
+            inputs=["trained_model_vit", "data_loaders"],
             outputs="final_metrics_vit",
             name="evaluate_vit_model_node"
         )

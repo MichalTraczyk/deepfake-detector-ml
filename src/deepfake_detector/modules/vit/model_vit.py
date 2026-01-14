@@ -38,7 +38,7 @@ class ModelViT(nn.Module):
                  activation, in_channels=3):
         super().__init__()
 
-        assert img_size % patch_size == 0, "Image size must be divisible by patch size."
+        assert img_size % patch_size == 0
         num_patches = (img_size // patch_size) ** 2
 
         self.embeddings_block = PatchEmbedding(embed_dim, patch_size, num_patches, dropout, in_channels)
