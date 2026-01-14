@@ -52,11 +52,11 @@ def load_vit_model_node(vit_params: dict, paths: dict, settings: dict) -> torch.
     return model
 
 
-def create_test_dataloader_node(settings: dict) -> DataLoader:
+def create_test_dataloader_node(settings: dict, params_preprocess:dict) -> DataLoader:
     res = settings['image_resolution']
     batch_size = 8
-    data_dir_celeb = "data/02_processed/"
-    data_dir_ff = "data/face_forentics_processed/"
+    data_dir_celeb = params_preprocess["celeb_df_output"]
+    data_dir_ff = params_preprocess["forensics_output"]
 
     transform_rgb = transforms.Compose([
         transforms.Resize((res, res)),

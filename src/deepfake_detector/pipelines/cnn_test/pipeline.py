@@ -5,7 +5,7 @@ from .test import create_cnn_gradcam_visualization, get_test_dataloaders, get_te
 def create_pipeline(**kwargs) -> Pipeline:
     return pipeline([node(
         func=get_test_dataloaders,
-        inputs="params:learning_settings",
+        inputs=["params:learning_settings", "params:preprocess"],
         outputs=["test_dataloader_celeb_df", "test_dataloader_celeb_ff"],
         name="loaders_node"
     ),

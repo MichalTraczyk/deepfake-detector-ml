@@ -6,7 +6,7 @@ def create_pipeline(**kwargs) -> Pipeline:
     return pipeline([
         node(
             func=create_test_dataloader_node,
-            inputs="params:learning_settings",
+            inputs=["params:learning_settings", "params:preprocess"],
             outputs=["test_dataloader_celeb_df", "test_dataloader_celeb_ff"],
             name="create_vit_dataloader_node",
         ),

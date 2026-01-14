@@ -28,11 +28,11 @@ class RGBBranchWrapper(nn.Module):
         return self.rgb_base(x)
 
 
-def get_test_dataloaders(params: dict):
+def get_test_dataloaders(params: dict, params_preprocess:dict):
     res = params['image_resolution']
     batch_size = params['batch_size']
-    data_dir_celeb = "data/02_processed/"
-    data_dir_ff = "data/face_forentics_processed/"
+    data_dir_celeb = params_preprocess["celeb_df_output"]
+    data_dir_ff = params_preprocess["forensics_output"]
 
     transform_rgb = transforms.Compose([
         transforms.Resize((res, res)),
