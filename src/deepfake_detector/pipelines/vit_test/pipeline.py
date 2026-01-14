@@ -1,5 +1,6 @@
 from kedro.pipeline import Pipeline, node, pipeline
-from .test import load_vit_model_node, create_test_dataloader_node, create_vit_gradcam_plot_node
+from .test import load_vit_model_node, create_test_dataloader_node, create_vit_gradcam_plot_node, run_evaluation
+
 
 def create_pipeline(**kwargs) -> Pipeline:
     return pipeline([
@@ -17,17 +18,17 @@ def create_pipeline(**kwargs) -> Pipeline:
         ),
         node(
             func=run_evaluation,
-            inputs=["test_model", "test_dataloader_celeb_df"],
+            inputs=["loaded_vit_model", "test_dataloader_celeb_df"],
             outputs="final_metrics_vit_celeb"
         ),
         node(
             func=run_evaluation,
-            inputs=["test_model", "test_dataloader_celeb_ff"],
+            inputs=["loaded_vit_model", "test_dataloader_celeb_ff"],
             outputs="final_metrics_vit_ff"
         ),
         node(
             func=create_vit_gradcam_plot_node,
-            inputs=["loaded_vit_model", "vit_test_loader"],
+            inputs=["loaded_vit_model", "test_dataloader_celeb_df"],
             outputs="vit_gradcam_plot",
             name="create_vit_gradcam_visualization_node",
         ),

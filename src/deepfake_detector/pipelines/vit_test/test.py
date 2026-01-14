@@ -74,12 +74,12 @@ def create_test_dataloader_node(settings: dict) -> DataLoader:
 
     test_loader.dataset_name = "Celeb"
     test_loaderff.dataset_name = "Face Forentics"
-    return test_loader
+    return test_loader, test_loaderff
 
 
 def run_evaluation(model, test_loader):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    ev = evaluate_model_metrics(model, test_loader, device, transformation=torch.sigmoid)
+    ev = evaluate_model_metrics(model, test_loader, device, transformation=torch.sigmoid,input_key="rgb_input")
     ev["confusion_matrix"] = str(ev["confusion_matrix"])
     plot = get_roc_plot(roc_curve_fpr=ev["roc_curve_fpr"], roc_curve_tpr=ev["roc_curve_tpr"])
     plot.savefig(os.path.join("data/04_reporting/", test_loader.dataset_name))
@@ -143,7 +143,8 @@ def create_vit_gradcam_plot_node(model, loader):
     for axis_idx, i in enumerate(selected_indexes):
         ax = axes[axis_idx]
 
-        (inputs, label) = dataset[i]
+        (item, label) = dataset[i]
+        inputs = item["rgb_input"]
         rgb_tensor = inputs.unsqueeze(0).to(device)
 
         grayscale_cam = cam(input_tensor=rgb_tensor, targets=None)
