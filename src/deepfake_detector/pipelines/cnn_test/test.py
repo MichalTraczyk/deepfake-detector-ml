@@ -52,7 +52,7 @@ def get_test_model(paths:dict):
     model.to(device)
     model.eval()
     params, trainable = count_parameters(model)
-    print("Liczba parametrow: " + params)
+    print("Liczba parametrow: " + str(params))
     return model
 
 def run_evaluation(model, test_loader):
