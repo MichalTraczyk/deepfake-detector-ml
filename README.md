@@ -22,9 +22,9 @@ Dane należy wypakować do poniższej struktury katalogów:
 1. Instalacja bibliotek do trenowania na GPU
 Pobierz i zainstaluj:
 
-CUDA 12.8 Download Archive
+[CUDA 12.8](https://developer.nvidia.com/cuda-12-8-0-download-archive?target_os=Windows&target_arch=x86_64&target_version=10&target_type=exe_local)
 
-cuDNN Downloads
+[cuDNN](https://developer.nvidia.com/cudnn-downloads?target_os=Windows&target_arch=x86_64&target_version=10)
 
 2. Instalacja zależności Python
 Uruchom w terminalu:
@@ -32,7 +32,7 @@ Uruchom w terminalu:
 ```Bash
 
 pip install -r requirements.txt
-pip3 install torch torchvision torchaudio --index-url [https://download.pytorch.org/whl/cu128](https://download.pytorch.org/whl/cu128)
+pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu128
 ```
 ## Obsługa Kedro
 Aby uruchomić wybrany potok: 
