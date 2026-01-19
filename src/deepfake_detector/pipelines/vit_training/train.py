@@ -11,6 +11,20 @@ from deepfake_detector.common import ImageDataset, BalancedBatchSampler
 from deepfake_detector.utils.train_utils import train_k_fold
 
 def create_dataloaders(params: dict):
+    """
+    Przygotowuje dane do treningu i testów.
+
+    Tworzy DataLoaders z odpowiednimi transformacjami:
+    - Trening: augmentacja, skalowanie i normalizacja.
+    - Testy: skalowanie i normalizacja.
+    Balansuje klasy w treningu za pomocą BalancedBatchSampler (50% Real i 50% Fake).
+
+    Args:
+        params (dict): Słownik zawierający parametry uczenia i danych wejściowych.
+
+    Returns:
+        dict: Słownik z loaderami dla kluczy 'train' i 'test'.
+    """
     res = params['image_resolution']
     batch_size = params['batch_size']
     data_dir = params['data_dir']
@@ -43,7 +57,20 @@ def create_dataloaders(params: dict):
 
 
 def run_training_loop(loaders: dict, params: dict, vit_params: dict):
+    """
+    Trening modelu ViT
 
+    Funkcja do tworzenia modelu z pretrenowanymi wagami, a następnie walidacja krzyżowa (K-Fold)
+    i trening na całości danych.
+
+    Args:
+        loaders (dict): Dane treningowe i testowe.
+        params (dict): Parametry do uczenia i danych.
+        vit_params (dict): Parametry do konstrukcji modelu ViT.
+
+    Returns:
+        torch.nn.Module: Wytrenowany model.
+    """
     def create_pretrained_vit():
         model = ModelViT(
             img_size=params['image_resolution'],
@@ -74,6 +101,18 @@ def run_training_loop(loaders: dict, params: dict, vit_params: dict):
 
 
 def run_final_evaluation(model, loaders: dict):
+    """
+    Funkcja do ewaluacji modelu ViT.
+
+    Przeprowadzanie predykcji na danych testowych i obliczanie metryk skuteczności modelu.
+
+    Args:
+        model (torch.nn.Module): Wytrenowany model.
+        loaders (dict): Dane treningowe i testowe.
+
+    Returns:
+        dict: Metryki.
+    """
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     test_loader = loaders['test']
     ev = evaluate_model_metrics(model, test_loader, device, transformation=torch.sigmoid, input_key="rgb_input")

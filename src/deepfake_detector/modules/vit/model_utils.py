@@ -6,16 +6,37 @@ import math
 
 
 def load_pretrained_weights(model):
+    """
+    Wczytywanie przetrenowanych wag z modeli ViT-B/16 do modelu Vision Transformer
 
+    Funkcja ta tłumaczy strukturę wag z przetrenowanego modelu z biblioteki 'torchvision'
+    na strukturę stworzoną w klasie 'ModelVit'
+
+    Najpierw pobierane są wagi wytrenowane na ImageNet-1k, następnie tłumaczy nazwy warstw,
+    po tym dochodzi do interpolacji pozycji, jeśli dany model przyjmuje obrazy o innej
+    rozdzielczości niż przetrenowany model oraz na ostatnim etapie ignoruje wagi ostatniej
+    warstwy klasyfikacyjnej ze względu, że ImageNet ma 1000 klas, a stworzony model ma tylko 2.
+
+    Args:
+        model (nn.Module): Instancja klasy 'ModelVit'
+
+    Returns:
+        nn.Module: Model z przypisanymi wagami
+
+    """
+
+    # Pobieranie wag z torchvision
     try:
         weights = models.VisionTransformer_Weights.IMAGENET1K_V1
         pretrained_dict = weights.get_state_dict()
     except AttributeError:
+        # Pobieranie dla starszych wersji torchvision ze względu na trenowanie na różnych komputerach
         temp_model = models.vit_b_16(pretrained=True)
         pretrained_dict = temp_model.state_dict()
 
     new_state_dict = {}
 
+    # Tłumaczenie nazw warstw dla stworzonego modelu
     for key, value in pretrained_dict.items():
         new_key = key
 
@@ -95,7 +116,7 @@ def load_pretrained_weights(model):
 
     missing_encoder = [k for k in msg.missing_keys if 'encoder_blocks' in k]
     if len(missing_encoder) > 0:
-        print(f"Brakuje {len(missing_encoder)} kluczy w encoderze")
+        print(f"Brakuje {len(missing_encoder)}")
         print(f"Przykłady: {missing_encoder[:3]}")
     else:
         print("Wagi transformera załadowane poprawnie")

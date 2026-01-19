@@ -3,6 +3,9 @@ from .test import create_cnn_gradcam_visualization, get_test_dataloader, get_tes
 
 
 def create_pipeline(**kwargs) -> Pipeline:
+    """
+    Pipeline do testów CNN
+    """
     return pipeline([node(
         func=get_test_dataloader,
         inputs="params:learning_settings",

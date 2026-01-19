@@ -21,6 +21,7 @@ from deepfake_detector.utils.metrics import evaluate_model_metrics, get_roc_plot
 
 
 class RGBBranchWrapper(nn.Module):
+
     def __init__(self, model):
         super().__init__()
         self.rgb_base = model.rgb_base
@@ -29,6 +30,17 @@ class RGBBranchWrapper(nn.Module):
         return self.rgb_base(x)
 
 def get_test_dataloader(params: dict):
+    """
+        Funkcja tworząca DataLoader dla zbioru testowego
+
+        Aplikuje normalizację ze standardem ImageNet.
+
+        Args:
+            params (dict): Konfiguracja zawierająca rozmiar batch oraz rozmiar obrazu.
+
+        Returns:
+            DataLoader: Obiekt iterujący dane testowe.
+    """
     res = params['image_resolution']
     batch_size = params['batch_size']
     data_dir = "data/02_processed/"
@@ -44,6 +56,15 @@ def get_test_dataloader(params: dict):
     return test_loader
 
 def get_test_model(paths:dict):
+    """
+    Inicjalizacja CNN i ładowanie wag z wytrenowanego modelu.
+
+    Args:
+        paths (dict): Słownik scieżek do wymaganych plików.
+
+    Returns:
+        torch.nn.Module: Gotowy model do ewaulacji.
+    """
     checkpoint_path = paths["cnn_model_path"]
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model = CnnModel()
@@ -56,6 +77,16 @@ def get_test_model(paths:dict):
     return model
 
 def run_evaluation(model, test_loader):
+    """
+    Ewaulacja modelu i generowanie raportów oraz wykresów.
+
+    Args:
+        model (torch.nn.Module): Wytrenowany model CNN.
+        test_loader (torch.utils.data.DataLoader): Dataloader dostarczający dane testowe.
+
+    Returns:
+        ev (dict): Zawiera metryki ewaluacyjne.
+    """
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     ev = evaluate_model_metrics(model, test_loader, device, transformation=torch.sigmoid)
     ev["confusion_matrix"] = str(ev["confusion_matrix"])
@@ -65,6 +96,16 @@ def run_evaluation(model, test_loader):
 
 
 def create_cnn_gradcam_visualization(loader : DataLoader, model):
+    """
+    Funkcja do generowania mapy aktywacji (heatmap).
+
+    Args:
+        loader (DataLoader): Loader z danymi testowymi.
+        model (torch.nn.Module): Wytrenowany model CNN.
+
+    Returns:
+        plt.figure: Wizualizacja mapy aktywacji.
+    """
     #selected_indexes = [9847,10341,8907,13796,12202,13200]
     selected_indexes = [12200,13200,13796,13500,13400,12702]
     rows, cols = 2, 3

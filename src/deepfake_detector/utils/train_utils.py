@@ -1,5 +1,4 @@
 import os
-
 import torch
 from tqdm import tqdm
 import torch.nn as nn
@@ -11,6 +10,22 @@ from deepfake_detector.utils.checkpoint import save_checkpoint, load_checkpoint
 from deepfake_detector.common import BalancedBatchSampler
 
 def train_one_epoch(model, loader, optimizer, criterion, device, input_key=None):
+    """
+    Trenowanie jednej epoki.
+
+    Iteruje przez dostarczony DataLoader, oblicza gradienty i aktualizuje wagi modelu oraz monitoruje loss i dokładność.
+
+    Args:
+        model (torch.nn.Module): Model do treningu.
+        loader (torch.utils.data.DataLoader): Dane treningowe.
+        optimizer (torch.optim.Optimizer): Optymalizator.
+        criterion (torch.nn.Module): Funkcja straty (BCEWithLogitsLoss).
+        device (torch.device): Urządzenie obliczeniowe "cpu" lub "cuda").
+        input_key (str, optional): Klucz, jeśli input jest słownikieme (dla ViT 'rgb_input').
+
+    Returns:
+        tuple: (avarage_loss, accuracy) dla tej epoki.
+    """
     model.train()
     total_loss, correct, total = 0, 0, 0
     for inputs, labels in tqdm(loader, desc="Training", leave=False):
@@ -37,6 +52,21 @@ def train_one_epoch(model, loader, optimizer, criterion, device, input_key=None)
 
 
 def train_k_fold(loaders: dict, params: dict, checkpoint_path: str, model_factory, input_key: str = None, final_path : str = None):
+    """
+    Walidacja krzyżowa (K-Fold) i uczenie na pełnym zbiorze danych.
+    Z mechanizmem Early stopping jeśli loss nie spoada przez 5 epok.
+
+    Args:
+        loaders (dict): Dane treningowe.
+        params (dict): Parametry treningowe (epoki, learning rate, k_folds, batch_size).
+        checkpoint_path (str): Ścieżka do zapisu punktu kontrolnego.
+        model_factory (callable): Funkcja zwracająca nową instację modelu.
+        input_key (str, optional): Klucz danych wejściowych modelu.
+        final_path (str): Ścieżka do zapisu modelu.
+
+    Returns:
+        torch.nn.Module: Wytrenowany model.
+    """
     train_loader = loaders['train']
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -48,6 +78,9 @@ def train_k_fold(loaders: dict, params: dict, checkpoint_path: str, model_factor
     all_samples = full_dataset.dataset.samples
     all_targets = np.array(full_dataset.dataset.targets)
     video_groups = []
+
+    # Wyciągniecie ID z video, aby zapobiec Data Leakage.
+    # Klatki z tego samego video trafiają do tego samego folda.
     for path, _ in all_samples:
         filename = os.path.basename(path)
         video_id = filename.split("_frame_")[0]
@@ -62,18 +95,21 @@ def train_k_fold(loaders: dict, params: dict, checkpoint_path: str, model_factor
         train_subset = Subset(full_dataset, train_idx)
         val_subset = Subset(full_dataset, val_idx)
 
+        # Balansowanie batchów
         train_labels_fold = all_targets[train_idx]
         train_sampler = BalancedBatchSampler(train_subset, batch_size, custom_labels=train_labels_fold)
 
         fold_train_loader = DataLoader(train_subset, batch_sampler=train_sampler)
         fold_val_loader = DataLoader(val_subset, batch_size=batch_size, shuffle=False)
 
+        # Inicjalizacja nowego modelu
         model = model_factory().to(device)
         criterion = nn.BCEWithLogitsLoss()
         optimizer = torch.optim.Adam(model.parameters(), lr=params["learning_rate"])
 
         fold_checkpoint_path = checkpoint_path.replace('.pt', f'_fold{fold + 1}.pt')
 
+        # Mechanizm Early Stopping
         best_val_loss = float('inf')
         patience = 5
         patience_counter = 0
@@ -86,6 +122,7 @@ def train_k_fold(loaders: dict, params: dict, checkpoint_path: str, model_factor
                   f"Train Loss: {train_loss:.4f} Acc: {train_acc:.4f} | "
                   f"Val Loss: {val_loss:.4f} Acc: {val_acc:.4f}")
 
+            # Zapis modelu gdy loss spadnie
             if val_loss < best_val_loss:
                 best_val_loss = val_loss
                 patience_counter = 0
@@ -104,6 +141,7 @@ def train_k_fold(loaders: dict, params: dict, checkpoint_path: str, model_factor
 
     print(f"\n{'=' * 15} TRAINING ON FULL DATASET {'=' * 15}")
 
+    # Utworzenie nowej instancji modelu
     final_model = model_factory().to(device)
     criterion = nn.BCEWithLogitsLoss()
     optimizer = torch.optim.Adam(final_model.parameters(), lr=1e-4)
@@ -114,6 +152,7 @@ def train_k_fold(loaders: dict, params: dict, checkpoint_path: str, model_factor
     final_checkpoint_path = final_path
     best_train_loss = float('inf')
 
+    # Trening bez walidacji
     for epoch in range(num_epochs):
         train_loss, train_acc = train_one_epoch(final_model, full_train_loader, optimizer, criterion, device,
                                                 input_key=input_key)

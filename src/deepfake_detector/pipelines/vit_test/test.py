@@ -1,26 +1,28 @@
 import os
 import torch
-import numpy as np
 import random
+import numpy as np
 import matplotlib.pyplot as plt
+from pytorch_grad_cam import EigenCAM
+from pytorch_grad_cam.utils.image import show_cam_on_image
 from torch.utils.data import DataLoader
 from torchvision import transforms
 from torchvision.datasets import ImageFolder
-from pytorch_grad_cam.utils.image import show_cam_on_image
 from deepfake_detector.modules.vit.model_vit import ModelViT
-from pytorch_grad_cam import EigenCAM
-
-
-def vit_reshape_transform(tensor):
-    patch_embeddings = tensor[:, 1:, :]
-    num_patches = patch_embeddings.shape[1]
-    grid_size = int(np.sqrt(num_patches))
-    result = patch_embeddings.transpose(1, 2)
-    result = result.reshape(tensor.size(0), result.size(1), grid_size, grid_size)
-    return result
 
 
 def load_vit_model_node(vit_params: dict, paths: dict, settings: dict) -> torch.nn.Module:
+    """
+    Inicjalizacja ViT i ładowanie wag z wytrenowanego modelu.
+
+    Args:
+        vit_params (dict): Słownik z parametrami dla ViT.
+        paths (dict): Słownik scieżek do wymaganych plików.
+        settings (dict): Słownik ustawień projektu.
+
+    Returns:
+        torch.nn.Module: Gotowy model do ewaulacji.
+    """
     checkpoint_path = paths["vit_model_path"]
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -49,6 +51,17 @@ def load_vit_model_node(vit_params: dict, paths: dict, settings: dict) -> torch.
 
 
 def create_test_dataloader_node(settings: dict) -> DataLoader:
+    """
+    Funkcja tworząca DataLoader dla zbioru testowego
+
+    Aplikuje normalizację ze standardem ImageNet.
+
+    Args:
+        settings (dict): Konfiguracja zawierająca ścieżke do danych oraz rozmiar obrazu.
+
+    Returns:
+        DataLoader: Obiekt iterujący dane testowe.
+    """
     res = settings['image_resolution']
     batch_size = 8
 
@@ -64,18 +77,16 @@ def create_test_dataloader_node(settings: dict) -> DataLoader:
     test_loader = DataLoader(test_data, batch_size=batch_size, shuffle=True)
     return test_loader
 
-
-import os
-import torch
-import random
-import numpy as np
-import matplotlib.pyplot as plt
-from pytorch_grad_cam import EigenCAM
-from pytorch_grad_cam.utils.image import show_cam_on_image
-
-
-# (Funkcja vit_reshape_transform bez zmian - upewnij się, że ją masz w pliku)
 def vit_reshape_transform(tensor):
+    """
+    Przekształcanie wektorów z ViT spowrotem na obraz 2D.
+
+    Args:
+        tensor (torch.Tensor): Wyjście z enkodera.
+
+    Returns:
+        torch.Tensor: Tensor przestrzenny.
+    """
     patch_embeddings = tensor[:, 1:, :]
     num_patches = patch_embeddings.shape[1]
     grid_size = int(np.sqrt(num_patches))
@@ -85,6 +96,16 @@ def vit_reshape_transform(tensor):
 
 
 def create_vit_gradcam_plot_node(model, loader):
+    """
+    Funkcja do generowania mapy aktywacji (heatmap) dla 8 obrazów 4 Fake i 4 Real.
+
+    Args:
+        model (torch.nn.Module): Wytrenowany model ViT.
+        loader (DataLoader): Loader z danymi testowymi.
+
+    Returns:
+        plt.figure: Wizualizacja mapy aktywacji dla 8 zdjęć.
+    """
     dataset = loader.dataset
 
     fake_indices = []

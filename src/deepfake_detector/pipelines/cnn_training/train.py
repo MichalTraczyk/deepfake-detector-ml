@@ -15,6 +15,19 @@ from deepfake_detector.utils.train_utils import train_k_fold
 
 
 def create_dataloaders(params: dict):
+    """
+        Przygotowuje dane do treningu i testów.
+
+        Tworzy DataLoaders z odpowiednimi transformacjami:
+        - Trening i Test: augmentacja, skalowanie i normalizacja.
+        Balansuje klasy w treningu za pomocą BalancedBatchSampler (50% Real i 50% Fake).
+
+        Args:
+            params (dict): Słownik zawierający parametry uczenia i danych wejściowych.
+
+        Returns:
+            dict: Słownik z loaderami dla kluczy 'train' i 'test'.
+        """
     res = params['image_resolution']
     batch_size = params['batch_size']
 
@@ -45,12 +58,30 @@ def create_dataloaders(params: dict):
 
 
 def create_model():
+    """
+    Tworzenie modelu CNN
+
+    Returns:
+        nn.Module: CNN model do uczenia.
+    """
     model = CnnModel()
 
     return model
 
 
 def train(loaders: dict, params: dict):
+    """
+    Uczenie modelu CNN.
+
+    Walidacja krzyżowa (K-Fold) i trening na całości danych.
+
+    Args:
+        loaders (dict): Dane treningowe i testowe.
+        params (dict): Parametry treningowe.
+
+    Returns:
+        torch.nn.Module: Wytrenowany model.
+    """
     final_model = train_k_fold(
         loaders=loaders,
         params=params,
@@ -63,6 +94,18 @@ def train(loaders: dict, params: dict):
 
 
 def run_final_evaluation(model, loaders: dict, params: dict):
+    """
+    Funkcja do ewaluacji modelu CNN.
+
+    Przeprowadzanie predykcji na danych testowych i obliczanie metryk skuteczności modelu.
+
+    Args:
+        model (nn.Module): Wytrenowany model CNN.
+        loaders (dict): Dane treningowe i testowe.
+
+    Returns:
+        ev (dict): Metryki.
+    """
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     test_loader = loaders['test']
     ev = evaluate_model_metrics(model, test_loader, device, transformation=torch.sigmoid)

@@ -13,8 +13,16 @@ from pytorch_grad_cam.utils.image import show_cam_on_image
 from pytorch_grad_cam.utils.model_targets import ClassifierOutputTarget
 
 class BalancedBatchSampler(Sampler):
+    """
+    Sampler do zbalaznsowania klas w batchu (50/50).
+    """
     def __init__(self, dataset, batch_size, custom_labels=None):
-
+        """
+        Args:
+            dataset (Dataset): Zbiór danych.
+            batch_size (int): Rozmiar wsadu.
+            custom_labels (list): Lista etykiet dla podzbioru.
+        """
         if custom_labels is not None:
             self.labels = custom_labels
         else:
@@ -34,6 +42,9 @@ class BalancedBatchSampler(Sampler):
         self.num_batches = self.min_class_len * 2 // self.batch_size
 
     def __iter__(self):
+        """
+        Generator zwracający indeksy batchów.
+        """
         indices_0 = self.label_to_indices[0].copy()
         indices_1 = self.label_to_indices[1].copy()
         random.shuffle(indices_0)
@@ -50,7 +61,15 @@ class BalancedBatchSampler(Sampler):
 
 
 class ImageDataset(Dataset):
+    """
+    Wrapper do standaryzacji formatu wejścia modelu.
+    """
     def __init__(self, image_folder, transform_rgb=None):
+        """
+        Args:
+            image_folder (Dataset): Dataset do zwracania zdjęć i kategorii.
+            transform_rgb (callable): Funkcja do augmentacji i transformacji obrazu.
+        """
         self.dataset = image_folder
         self.transform_rgb = transform_rgb
 
@@ -58,6 +77,12 @@ class ImageDataset(Dataset):
         return len(self.dataset)
 
     def __getitem__(self, idx):
+        """
+        Transformowanie zdjęcia.
+
+        Returns:
+            tuple: (dane wejściowe, etykieta)
+        """
         image, label = self.dataset[idx]
         if self.transform_rgb:
             rgb_input = self.transform_rgb(image)

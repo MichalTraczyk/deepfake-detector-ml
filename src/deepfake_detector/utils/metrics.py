@@ -9,6 +9,17 @@ from sklearn.metrics import precision_score, recall_score, f1_score, accuracy_sc
 
 
 def compute_classification_metrics(y_true, y_pred, average="weighted"):
+    """
+    Obliczanie metryk klasyfikacji przy użyciu biblioteki scikit-learn.
+    
+    Args:
+        y_true (array): Rzeczywiste etykiety klas.
+        y_pred (array): Przewidywane etykiety klas.
+        average (str): Metoda do uśredniania klasyfikacji.
+
+    Returns:
+        dict: Metryki: presision, recall, f1_score, accuracy_score i confusion matrix.
+    """
     precision = precision_score(y_true, y_pred, average=average, zero_division=0)
     recall = recall_score(y_true, y_pred, average=average, zero_division=0)
     f1 = f1_score(y_true, y_pred, average=average, zero_division=0)
@@ -25,12 +36,24 @@ def compute_classification_metrics(y_true, y_pred, average="weighted"):
 
 
 def calculate_roc_auc(y_true, y_score):
+    """
+    Obliczanie pola pod krzywą ROC (AUC).
+
+    Args:
+        y_true (array): Rzeczywiste etykiety klas.
+        y_score (array): Logity zwrócone przed model.
+
+    Returns:
+        dict: Wartość AUC
+    """
+
     try:
         roc_auc = roc_auc_score(y_true, y_score)
     except ValueError:
         print("Warning: Only one class present in y_true. ROC AUC set to 0.5.")
         roc_auc = 0.5
 
+    # Wyliczanie punktów krzywej ROC
     fpr, tpr, _ = roc_curve(y_true, y_score)
 
     return {
@@ -41,6 +64,20 @@ def calculate_roc_auc(y_true, y_score):
 
 
 def evaluate_model_metrics(model, dataloader, device="cpu", threshold=0.5, transformation=None, input_key=None):
+    """
+    Pętla do ewaluacji modelu.
+
+    Args:
+        model (nn.Module): Model do ewaluacji.
+        dataloader (DataLoader): Dataloader danych testowych.
+        device (str, optional): Urządzenie obliczeniowe "cpu" lub "cuda".
+        threshold (float, optional): Próg odcięcia dla klasyfikacji binarnej.
+        transformation (callable, optional): Funkcja wyjściowa np. sigmoid.
+        input_key (str, optional): Klucz słownika.
+
+    Returns:
+        dict: Słownik z metrykami klasyfikacji, ROC oraz czasem ewaluacji.
+    """
     model.eval()
     model.to(device)
 
@@ -84,6 +121,18 @@ def evaluate_model_metrics(model, dataloader, device="cpu", threshold=0.5, trans
 
 
 def evaluate_train_accuracy(model, loader, criterion, device="cpu", transformation=None, input_key: str = None):
+    """
+    Uproszczona funkcja do ewaluacji modelu podczas treningu.
+
+    Args:
+        model (nn.Module): Model do ewaluacji.
+        loader (DataLoader): Loader danych.
+        criterion (loss function): Funkcja straty.
+        device (str): Urządzenie obliczenie "cpu" lub "cuda".
+
+    Returns:
+        tuple: (avarage_loss, accuracy).
+    """
     model.eval()
     running_loss = 0
     correct = 0
@@ -116,6 +165,16 @@ def evaluate_train_accuracy(model, loader, criterion, device="cpu", transformati
 
 
 def get_roc_plot(roc_curve_fpr, roc_curve_tpr):
+    """
+    Generowanie wykresu dla krzywej ROC.
+
+    Args:
+        roc_curve_tpr (list): Współczynnik Prawdziwie Pozytywnych.
+        roc_curve_fpr (list): Współczynnik Fałszywie Pozytywnych.
+
+    Returns:
+        matplotlib.figure.Figure: Wykres z krzywą ROC.
+    """
     roc_auc = np.trapz(roc_curve_tpr, roc_curve_fpr)
     fig, ax = plt.subplots(figsize=(8, 8))
 

@@ -2,6 +2,9 @@ from kedro.pipeline import Pipeline, node, pipeline
 from .test import load_vit_model_node, create_test_dataloader_node, create_vit_gradcam_plot_node
 
 def create_pipeline(**kwargs) -> Pipeline:
+    """
+    Funkcja do tworzenia pipeline'u do testów dla modelu ViT.
+    """
     return pipeline([
         node(
             func=create_test_dataloader_node,
