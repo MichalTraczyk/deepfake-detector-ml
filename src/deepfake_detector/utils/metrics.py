@@ -116,7 +116,7 @@ def evaluate_model_metrics(model, dataloader, device="cpu", threshold=0.5, trans
     classification_metrics = compute_classification_metrics(all_labels, all_preds)
     classification_metrics.update(eval_time)
     classification_metrics.update(roc_metrics)
-    print("Evaluating: " + len(all_preds) + " took " + time_spent_evaluating + " seconds")
+    print("Evaluating: " + str(len(all_preds)) + " took " + str(time_spent_evaluating) + " seconds")
     return classification_metrics
 
 

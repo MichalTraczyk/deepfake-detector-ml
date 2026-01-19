@@ -11,7 +11,6 @@ from deepfake_detector.common import ImageDataset
 from deepfake_detector.test import gradcam_on_branch, count_parameters
 from deepfake_detector.utils.checkpoint import load_checkpoint
 
-
 # ----------------------
 # Branch wrappers
 # ----------------------
@@ -21,7 +20,6 @@ from deepfake_detector.utils.metrics import evaluate_model_metrics, get_roc_plot
 
 
 class RGBBranchWrapper(nn.Module):
-
     def __init__(self, model):
         super().__init__()
         self.rgb_base = model.rgb_base
@@ -29,42 +27,33 @@ class RGBBranchWrapper(nn.Module):
     def forward(self, x):
         return self.rgb_base(x)
 
-def get_test_dataloader(params: dict):
-    """
-        Funkcja tworząca DataLoader dla zbioru testowego
 
-        Aplikuje normalizację ze standardem ImageNet.
-
-        Args:
-            params (dict): Konfiguracja zawierająca rozmiar batch oraz rozmiar obrazu.
-
-        Returns:
-            DataLoader: Obiekt iterujący dane testowe.
-    """
+def get_test_dataloaders(params: dict, params_preprocess:dict):
     res = params['image_resolution']
     batch_size = params['batch_size']
-    data_dir = "data/02_processed/"
+    data_dir_celeb = params_preprocess["celeb_df_output"]
+    data_dir_ff = params_preprocess["forensics_output"]
 
     transform_rgb = transforms.Compose([
         transforms.Resize((res, res)),
         transforms.ToTensor(),
         transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
     ])
-    test_data = ImageFolder(os.path.join(data_dir, 'test'))
+    test_data = ImageFolder(os.path.join(data_dir_celeb, 'test'))
     test_dataset = ImageDataset(test_data, transform_rgb)
     test_loader = DataLoader(test_dataset, batch_size=batch_size)
-    return test_loader
 
-def get_test_model(paths:dict):
-    """
-    Inicjalizacja CNN i ładowanie wag z wytrenowanego modelu.
+    test_dataff = ImageFolder(data_dir_ff)
+    test_datasetff = ImageDataset(test_dataff, transform_rgb)
+    test_loaderff = DataLoader(test_datasetff, batch_size=batch_size)
 
-    Args:
-        paths (dict): Słownik scieżek do wymaganych plików.
+    test_loader.dataset_name = "Celeb"
+    test_loaderff.dataset_name = "Face Forentics"
 
-    Returns:
-        torch.nn.Module: Gotowy model do ewaulacji.
-    """
+    return test_loader, test_loaderff
+
+
+def get_test_model(paths: dict):
     checkpoint_path = paths["cnn_model_path"]
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model = CnnModel()
@@ -73,39 +62,20 @@ def get_test_model(paths:dict):
     model.to(device)
     model.eval()
     params, trainable = count_parameters(model)
-    print("Liczba parametrow: " + params)
+    print("Liczba parametrow: " + str(params))
     return model
 
+
 def run_evaluation(model, test_loader):
-    """
-    Ewaulacja modelu i generowanie raportów oraz wykresów.
-
-    Args:
-        model (torch.nn.Module): Wytrenowany model CNN.
-        test_loader (torch.utils.data.DataLoader): Dataloader dostarczający dane testowe.
-
-    Returns:
-        ev (dict): Zawiera metryki ewaluacyjne.
-    """
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     ev = evaluate_model_metrics(model, test_loader, device, transformation=torch.sigmoid)
     ev["confusion_matrix"] = str(ev["confusion_matrix"])
-    plot = get_roc_plot(roc_curve_fpr=ev["roc_curve_fpr"],roc_curve_tpr=ev["roc_curve_tpr"])
-    plot.savefig("data/04_reporting/cnn_roc_plot.png")
+    plot = get_roc_plot(roc_curve_fpr=ev["roc_curve_fpr"], roc_curve_tpr=ev["roc_curve_tpr"])
+    plot.savefig(os.path.join("data/04_reporting/", test_loader.dataset_name))
     return ev
 
 
 def create_cnn_gradcam_visualization(loader : DataLoader, model):
-    """
-    Funkcja do generowania mapy aktywacji (heatmap).
-
-    Args:
-        loader (DataLoader): Loader z danymi testowymi.
-        model (torch.nn.Module): Wytrenowany model CNN.
-
-    Returns:
-        plt.figure: Wizualizacja mapy aktywacji.
-    """
     #selected_indexes = [9847,10341,8907,13796,12202,13200]
     selected_indexes = [12200,13200,13796,13500,13400,12702]
     rows, cols = 2, 3
