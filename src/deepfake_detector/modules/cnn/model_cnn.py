@@ -22,7 +22,7 @@ class CnnModel(nn.Module):
 
     def forward(self, inputs):
         """
-        Przepływ danych przez sieć
+        Przepływ danych przez sieć.
 
         Args:
             inputs (dict): Słownik zawierający dane wejściowe
