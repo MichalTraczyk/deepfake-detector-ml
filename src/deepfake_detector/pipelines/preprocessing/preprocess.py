@@ -6,6 +6,23 @@ from tqdm import tqdm
 
 
 def process_video_to_frames(video_path, output_path, image_processor, frames_per_video=None):
+    """
+    Wyciąganie klatek z pliku wideo, wykrywanie twarzu i zapisywanie ich.
+
+    Zaimplementowe jest próbkowanie czasowe oraz wczesne przerywanie
+    w przypadku braku twarzy.
+
+    Args:
+        video_path (str): Ścieżka do pliku wideo.
+        output_path (str): Ścieżka do zapisu klatek.
+        image_processor (ImageFaceProccesor): Obiekt detektora twarzy.
+        frames_per_video (int, optional): Limit klatek.
+
+    Returns:
+        tuple: (frame_count, saved_count):
+            - frame_count (int): Ilość przetworzonych klatek.
+            - saved_count (int): Ilość zapisanych klatek.
+    """
     cap = cv2.VideoCapture(video_path)
     if not cap.isOpened():
         return 0, 0
@@ -19,9 +36,12 @@ def process_video_to_frames(video_path, output_path, image_processor, frames_per
         if not ret:
             break
 
+        # Branie co 30 klatkę filmu
         if frame_count % 30 == 0:
+            # Wycięcie twarzy
             img = image_processor.get_face(frame)
             if img is None:
+                # Implementacja wczesnego przerywania
                 skipped_in_row += 1
                 if skipped_in_row == 60: break
                 continue
@@ -46,6 +66,16 @@ def process_video_to_frames(video_path, output_path, image_processor, frames_per
 
 
 def run_extraction(raw_dirs, target_base_dir, res, mode="multi"):
+    """
+    Proces ektrakcji danych.
+    Iteruje po katalogach z surowymi danymi i przetwarzanie wideo z nich.
+
+    Args:
+        raw_dirs (dict): Słownik z ścieżkami do surowych danych.
+        target_base_dir (str): Ścieżka do zapisu klatek z przetworzonyc plików wideo.
+        res (int): Rozdzielczość docelowa klatki z twarzą.
+        mode (str): Tryb 'single' (1 klatka na wideo) lub 'multi' (co 30 klatka)
+    """
     from deepfake_detector.utils.FaceProcessor import ImageFaceProcessor
     processor = ImageFaceProcessor((res, res))
 
@@ -72,6 +102,16 @@ def run_extraction(raw_dirs, target_base_dir, res, mode="multi"):
 
 
 def split_data(processed_dir, train_ratio=0.8):
+    """
+    Podział na zbiory testowe i treningowe
+
+    Wszystkie klatki z tego samego wideo trafiają do tego samego zbioru,
+    aby zapobiec wyciekowi danych.
+
+    Args:
+        processed_dir (str): Ścieżka do kotalogu z podzielonymi zbiorami.
+        train_ratio (float): Procent danych, które trafią do zbioru treningowego.
+    """
     classes = ['real', 'fake']
     random.seed(42)
 
@@ -82,6 +122,7 @@ def split_data(processed_dir, train_ratio=0.8):
         files = [f for f in os.listdir(src_dir) if os.path.isfile(os.path.join(src_dir, f))]
         video_groups = {}
 
+        # Grupowanie klatek po id wideo
         for f in files:
             video_id = f.split("_frame_")[0] if "_frame_" in f else os.path.splitext(f)[0]
             video_groups.setdefault(video_id, []).append(f)
