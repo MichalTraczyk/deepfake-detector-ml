@@ -1,7 +1,3 @@
-# Praca Inżynierska
-
-**Dokumentacja:** [Link do dokumentu](https://docs.google.com/document/d/1vwCZgo1lLyNIXctKjpwBRIgVVJ1DtH0ubrmZTCOeKFY/edit?usp=sharing)
-
 ## Zbiory danych (Datasets)
 
 * **Dataset główny:** [Google Drive](https://drive.google.com/open?id=1iLx76wsbi9itnkxSqz9BVBl4ZvnbIazj)
